@@ -41,6 +41,17 @@ interface ShopContextType {
   resumeTimer: () => void;
   resetTimer: () => void;
   setTimerSecondsLeft: React.Dispatch<React.SetStateAction<number>>;
+  
+  // MongoDB Full-stack session details
+  user: { name: string; email: string } | null;
+  setUser: (user: { name: string; email: string } | null) => void;
+  customProducts: Product[];
+  fetchCustomProducts: () => Promise<void>;
+  orders: any[];
+  fetchOrders: () => Promise<void>;
+  mongodbLogs: any[];
+  mongodbStats: any;
+  fetchMongodbStatus: () => Promise<any>;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -62,6 +73,93 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activePage, setActivePage] = useState("store");
 
   const [isTrackingOpen, setTrackingOpen] = useState(false);
+  
+  // Full-stack states linked to MongoDB
+  const [user, setUser] = useState<{ name: string; email: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem("tea_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [customProducts, setCustomProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [mongodbLogs, setMongodbLogs] = useState<any[]>([]);
+  const [mongodbStats, setMongodbStats] = useState<any>({
+    connected: true,
+    cluster: "TwoLeaves-Bud-Cluster-0",
+    version: "7.0.5",
+    uri: "mongodb+srv://admin:******@twoleaves-bud-cluster-0.mongodb.net/tea_store",
+    collections: { users: 1, orders: 1, products: 0, mongodbLogs: 2 }
+  });
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("tea_user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("tea_user");
+    }
+  }, [user]);
+
+  const fetchCustomProducts = async () => {
+    try {
+      const resp = await fetch("/api/products");
+      if (resp.ok) {
+        const data = await resp.json();
+        setCustomProducts(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch custom products from MongoDB:", err);
+    }
+  };
+
+  const fetchOrders = async () => {
+    if (!user) return;
+    try {
+      const resp = await fetch(`/api/orders?email=${encodeURIComponent(user.email)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setOrders(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch orders from MongoDB:", err);
+    }
+  };
+
+  const fetchMongodbStatus = async () => {
+    try {
+      const resp = await fetch("/api/mongodb/status");
+      if (resp.ok) {
+        const data = await resp.json();
+        setMongodbLogs(data.logs || []);
+        setMongodbStats({
+          connected: data.connected,
+          cluster: data.cluster,
+          version: data.version,
+          uri: data.uri,
+          collections: data.collections
+        });
+        return data;
+      }
+    } catch (err) {
+      console.error("Failed to fetch MongoDB status:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomProducts();
+    fetchMongodbStatus();
+  }, [activePage]); // Fetch whenever navigating pages
+
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    } else {
+      setOrders([]);
+    }
+  }, [user]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const [timerSecondsTotal, setTimerSecondsTotal] = useState(0);
@@ -199,8 +297,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart([]);
   };
 
-  // Perform filtering based on search query, vibe tags & category tags
-  const filteredProducts = PRODUCTS.filter((p) => {
+  // Perform filtering based on search query, vibe tags & category tags over combined standard and custom products
+  const combinedProducts = [...PRODUCTS, ...customProducts];
+  const filteredProducts = combinedProducts.filter((p) => {
     // 1. Filter by category if not "all"
     if (activeCategory !== "all" && p.category !== activeCategory) {
       return false;
@@ -281,6 +380,17 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resumeTimer,
         resetTimer,
         setTimerSecondsLeft,
+        
+        // Full-stack fields
+        user,
+        setUser,
+        customProducts,
+        fetchCustomProducts,
+        orders,
+        fetchOrders,
+        mongodbLogs,
+        mongodbStats,
+        fetchMongodbStatus
       }}
     >
       {children}

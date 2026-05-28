@@ -14,6 +14,9 @@ import { FloatingTimer } from "./components/FloatingTimer";
 import { WholesalePage } from "./components/WholesalePage";
 import { OriginsPage } from "./components/OriginsPage";
 import { JournalPage } from "./components/JournalPage";
+import { AccountPage } from "./components/AccountPage";
+import { AdminPage } from "./components/AdminPage";
+import { MongodbDashboard } from "./components/MongodbDashboard";
 import { REVIEWS, VIBES } from "./data";
 import { 
   Star, 
@@ -150,6 +153,12 @@ function MainAppContent() {
         <WholesalePage />
       ) : activePage === "journal" ? (
         <JournalPage />
+      ) : activePage === "account" ? (
+        <AccountPage />
+      ) : activePage === "admin" ? (
+        <AdminPage />
+      ) : activePage === "mongodb" ? (
+        <MongodbDashboard />
       ) : (
         <>
           {/* SECTION 1: HERO CONTAINER SETUP */}
@@ -191,13 +200,24 @@ function MainAppContent() {
               </a>
             </div>
           </div>
-
-          {/* Hero right-hand: Beautiful interactive visual tea layout mimicking high-end brewing vessel */}
+             {/* Hero right-hand: Beautiful high-fidelity interactive visual tea scene matching Two Leaves and a Bud branding */}
           <div className="col-span-12 md:col-span-6 flex items-center justify-center relative">
             <div className="relative p-6 bg-white/10 rounded-3xl border-2 border-white/25 shadow-2xl backdrop-blur-md max-w-md w-full flex flex-col items-center">
               
+              {/* Scattered Floating Berries & Tea Leaves in Background */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                {/* Raspberry top left */}
+                <span className="absolute top-2 left-2 text-xl animate-bounce opacity-80" style={{ animationDuration: "3s" }}>🍓</span>
+                {/* Blackberry top right */}
+                <span className="absolute top-4 right-3 text-lg opacity-70 animate-pulse">🍇</span>
+                {/* Mint leaf bottom left */}
+                <span className="absolute bottom-4 left-2 text-base opacity-60 animate-bounce" style={{ animationDuration: "4s" }}>🌿</span>
+                {/* Golden bubble bottom right */}
+                <span className="absolute bottom-10 right-4 text-sm opacity-40 animate-pulse">✨</span>
+              </div>
+
               {/* Small Category Tabs at Top */}
-              <div className="flex justify-between items-center w-full gap-1 mb-6 bg-black/20 p-1 border border-white/20 rounded-2xl">
+              <div className="flex justify-between items-center w-full gap-1 mb-6 bg-black/25 p-1 border border-white/20 rounded-2xl z-10">
                 {[
                   { id: "alpine", label: "Alpine Red", emoji: "🍓" },
                   { id: "matcha", label: "Uji Matcha", emoji: "🍵" },
@@ -213,7 +233,7 @@ function MainAppContent() {
                     }}
                     className={`flex-1 py-1.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex flex-col md:flex-row items-center justify-center gap-1 cursor-pointer ${
                       brewTea === item.id 
-                        ? "bg-[#FFFDE7] text-neutral-900 shadow-md transform -translate-y-0.5" 
+                        ? "bg-[#FFFDE7] text-neutral-900 shadow-md transform -translate-y-0.5 border border-black/10" 
                         : "text-white/80 hover:bg-white/10"
                     }`}
                   >
@@ -223,71 +243,115 @@ function MainAppContent() {
                 ))}
               </div>
 
-              {/* Dynamic Brew Station Vessel Illustration */}
-              <div className="relative w-full h-56 bg-black/10 border-2 border-white/15 rounded-2xl flex flex-col items-center justify-center overflow-hidden">
+              {/* Dynamic Brew Station Vessel Illustration (Includes Animated Teapot + Tea Carton + Cup!) */}
+              <div className="relative w-full h-64 bg-black/20 border-2 border-white/15 rounded-2xl flex items-center justify-between p-4 overflow-hidden z-10">
                 
-                {/* Active Rising Steam Vector Lanes - Staggered animations */}
-                <div className="absolute top-4 flex justify-center gap-3 w-full opacity-60">
-                  <div className={`w-1 h-12 bg-white/40 rounded-full blur-[2px] transform -translate-y-4 ${isHeroSteeping ? "animate-pulse" : ""}`}></div>
-                  <div className={`w-1 h-16 bg-white/30 rounded-full blur-[3px] transform -translate-y-4 delay-300 ${isHeroSteeping ? "animate-pulse" : ""}`}></div>
-                  <div className={`w-1 h-10 bg-white/40 rounded-full blur-[2px] transform -translate-y-4 delay-700 ${isHeroSteeping ? "animate-pulse" : ""}`}></div>
+                {/* 1. White Ceramic Teapot (Tilted and pouring when steeping!) */}
+                <div 
+                  className={`absolute left-4 top-4 transition-all duration-700 ease-in-out z-20 origin-bottom-right ${
+                    isHeroSteeping ? "transform rotate-[18deg] translate-y-2 translate-x-3 scale-110" : "hover:scale-105"
+                  }`}
+                >
+                  <svg viewBox="0 0 100 80" className="w-20 h-16 drop-shadow-lg text-white">
+                    {/* Spout */}
+                    <path d="M 12 45 C 5 35 15 25 30 35 C 28 38 18 42 12 45 Z" fill="#F8FAFC" stroke="#94A3B8" strokeWidth="1.5" />
+                    {/* Handle */}
+                    <path d="M 75 40 C 95 30 90 65 75 55" fill="none" stroke="#F8FAFC" strokeWidth="6" strokeLinecap="round" />
+                    {/* Pot body */}
+                    <ellipse cx="52" cy="48" rx="26" ry="22" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2" />
+                    <ellipse cx="52" cy="46" rx="24" ry="19" fill="#F8FAFC" />
+                    {/* Pot lid */}
+                    <path d="M 38 28 C 38 22 66 22 66 28 Z" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="2" />
+                    <circle cx="52" cy="22" r="4" fill="#E2E8F0" />
+                  </svg>
+                  <span className="absolute -bottom-1 left-5 text-[8px] font-mono text-white/55">teapot</span>
                 </div>
 
-                {/* The Brewing Mug Base visual */}
-                <div className="relative w-40 h-32 mt-6 flex flex-col justify-end">
+                {/* Hot pouring liquid stream representation */}
+                {isHeroSteeping && (
+                  <div className="absolute left-[16px] top-[34px] w-[50px] h-[75px] pointer-events-none z-10 overflow-hidden">
+                    <svg viewBox="0 0 50 100" className="w-full h-full">
+                      <path 
+                        d="M 10 0 Q 30 40 40 100" 
+                        fill="none" 
+                        stroke={brewTea === "alpine" ? "#EF4444" : brewTea === "matcha" ? "#10B981" : brewTea === "grey" ? "#F59E0B" : "#14B8A6"} 
+                        strokeWidth="3" 
+                        strokeDasharray="4,4"
+                        className="animate-pulse"
+                      />
+                    </svg>
+                  </div>
+                )}
+
+                {/* 2. Brand Tea Packaging Box Representation */}
+                <div className="absolute right-4 bottom-4 w-16 h-28 bg-[#FFFDE7] rounded-xl border-2 border-slate-700 shadow-md p-1.5 flex flex-col justify-between hover:scale-105 transition-transform z-10">
+                  <div className="border-b border-dashed border-red-200 pb-1 text-center">
+                    <span className="text-[6px] font-black uppercase text-red-500 tracking-wider">alpine red</span>
+                  </div>
+                  <div className="my-auto text-center flex flex-col justify-center">
+                    <span className="font-serif italic font-bold text-[8px] leading-tight text-neutral-800">two leaves</span>
+                    <span className="text-[5px] uppercase font-light text-neutral-500 tracking-widest leading-none">and a bud</span>
+                  </div>
+                  <div className="bg-[#5D8B2C] text-white text-[5px] font-mono font-bold text-center py-0.5 rounded-sm">
+                    100% ORGANIC
+                  </div>
+                </div>
+
+                {/* 3. Glass Tea Mug Base visual centered/aligned */}
+                <div className="absolute left-24 bottom-4 w-28 h-24 flex flex-col justify-end z-20">
                   
                   {/* Mug Handle */}
-                  <div className="absolute right-[-18px] top-6 w-12 h-20 border-4 border-white/80 rounded-r-3xl -z-10 bg-transparent transform rotate-12"></div>
+                  <div className="absolute right-[-10px] top-4 w-8 h-12 border-3 border-white/80 rounded-r-2xl z-0 bg-transparent transform rotate-12"></div>
                   
                   {/* Mug Glass Body */}
-                  <div className="w-full h-full border-4 border-t-0 border-white/80 rounded-b-3xl relative overflow-hidden bg-white/5 flex flex-col justify-end p-1 shadow-inner">
+                  <div className="w-full h-[85%] border-3 border-t-0 border-white/80 rounded-b-2xl relative overflow-hidden bg-white/5 flex flex-col justify-end p-0.5 shadow-inner z-10">
                     
                     {/* Glowing Liquid Infusion Layer (color matches active select brewTea) */}
                     <div 
-                      className={`w-full transition-all duration-700 relative rounded-b-2xl ${
+                      className={`w-full transition-all duration-700 relative rounded-b-xl ${
                         isHeroSteeping ? "h-[90%] saturate-150 brightness-110" : "h-[75%]"
                       } ${
                         brewTea === "alpine" ? "bg-red-700/60 shadow-[inset_0_0_20px_rgba(185,28,28,0.5)]" :
                         brewTea === "matcha" ? "bg-emerald-800/85 shadow-[inset_0_0_20px_rgba(6,95,70,0.5)]" :
                         brewTea === "grey" ? "bg-amber-800/60 shadow-[inset_0_0_20px_rgba(146,64,14,0.5)]" :
-                        "bg-teal-600/40 shadow-[inset_0_0_15px_rgba(13,148,136,0.3)]"
+                        "bg-teal-600/40 shadow-[inset_0_0_15px_rgba(13,148,136,0.2)]"
                       }`}
                     >
-                      {/* Interactive floating ingredients */}
+                      {/* Active Rising Steam Vector Lanes - Staggered animations */}
+                      {isHeroSteeping && (
+                        <div className="absolute bottom-6 flex justify-center gap-2 w-full opacity-60">
+                          <div className="w-0.5 h-12 bg-white/50 rounded-full blur-[1px] transform -translate-y-2 animate-bounce"></div>
+                          <div className="w-0.5 h-10 bg-white/40 rounded-full blur-[2px] transform -translate-y-4 delay-100 animate-bounce"></div>
+                        </div>
+                      )}
+
+                      {/* Interactive floating elements inside cup */}
                       {brewTea === "alpine" && (
                         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                          <span className="absolute top-2 left-4 text-xs animate-bounce opacity-75">🍒</span>
-                          <span className="absolute top-6 right-8 text-xs animate-pulse opacity-60">🍓</span>
-                          <span className="absolute bottom-4 left-10 text-[8px] opacity-40">🔴</span>
+                          <span className="absolute top-2 left-4 text-[10px] animate-bounce opacity-75">🍓</span>
+                          <span className="absolute top-6 right-6 text-[10px] animate-pulse opacity-60">🍒</span>
                         </div>
                       )}
 
                       {brewTea === "matcha" && (
                         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                          {/* Rich matcha froth foam styling */}
-                          <div className="absolute top-0 w-full h-3 bg-[#a2c97a] opacity-85 border-b border-green-900 rounded-t-sm flex justify-around">
-                            <span className="w-1.5 h-1.5 bg-green-200/40 rounded-full"></span>
+                          <div className="absolute top-0 w-full h-2 bg-[#a2c97a] opacity-85 border-b border-green-900 rounded-t-sm flex justify-around">
+                            <span className="w-1.5 h-1 bg-green-200/40 rounded-full"></span>
                             <span className="w-1.5 h-1 bg-green-200/50 rounded-full"></span>
-                            <span className="w-2 h-1.5 bg-green-200/30 rounded-full"></span>
                           </div>
-                          <span className="absolute top-4 left-6 text-sm animate-pulse opacity-75">🍃</span>
-                          <span className="absolute top-10 right-12 text-[10px] animate-bounce opacity-50">🍵</span>
+                          <span className="absolute top-3 left-4 text-xs animate-pulse opacity-75">🍃</span>
                         </div>
                       )}
 
                       {brewTea === "grey" && (
                         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                          <span className="absolute top-3 left-6 text-xs animate-bounce opacity-75">🍊</span>
-                          <span className="absolute top-8 right-6 text-xs animate-pulse opacity-60">🍂</span>
-                          <span className="absolute bottom-6 left-12 text-[8px] opacity-45">🔶</span>
+                          <span className="absolute top-2 left-4 text-xs animate-bounce opacity-75">🍊</span>
                         </div>
                       )}
 
                       {brewTea === "mint" && (
                         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                          <span className="absolute top-2 left-6 text-2xs animate-pulse opacity-85">🌿</span>
-                          <span className="absolute top-8 right-6 text-2xs animate-bounce opacity-70">🌿</span>
-                          <span className="absolute bottom-5 left-10 text-[9px] opacity-40">✨</span>
+                          <span className="absolute top-2 left-4 text-xs animate-pulse opacity-85">🌿</span>
                         </div>
                       )}
 
@@ -299,17 +363,16 @@ function MainAppContent() {
                     </div>
 
                     {/* Glass glare line overlay */}
-                    <div className="absolute left-3 top-2 w-1.5 h-[85%] bg-white/20 rounded-full pointer-events-none"></div>
+                    <div className="absolute left-3 top-2 w-1 h-[80%] bg-white/25 rounded-full pointer-events-none"></div>
 
                   </div>
-
                 </div>
 
                 {/* Sachet Steeper String Hanging Out */}
-                <div className={`absolute transition-all duration-500 w-1 bg-amber-100/40 border-l border-amber-900/30 ${
-                  isHeroSteeping ? "top-4 h-24" : "top-2 h-16"
+                <div className={`absolute left-[138px] transition-all duration-500 w-0.5 bg-dashed bg-amber-150/40 border-l border-amber-900/40 z-30 ${
+                  isHeroSteeping ? "bottom-14 h-16" : "bottom-10 h-12"
                 }`}>
-                  <div className="absolute bottom-0 -left-1.5 w-4 h-4 rounded bg-[#E57373] text-[5px] font-black text-white flex items-center justify-center uppercase select-none cursor-pointer">
+                  <div className="absolute -bottom-1 -left-1.5 w-3.5 h-3.5 rounded-full bg-[#E57373] text-[5px] font-black text-white flex items-center justify-center uppercase select-none cursor-pointer">
                     tb
                   </div>
                 </div>
@@ -317,7 +380,7 @@ function MainAppContent() {
               </div>
 
               {/* Dynamic Brewing controls with real countdown timer */}
-              <div className="w-full mt-4 bg-white/95 rounded-2xl p-4 text-neutral-900 border-2 border-dashed border-neutral-300">
+              <div className="w-full mt-4 bg-white/95 rounded-2xl p-4 text-neutral-900 border-2 border-dashed border-neutral-300 z-10">
                 <div className="flex justify-between items-center mb-3">
                   <div>
                     <h4 className="font-serif italic font-extrabold text-[#1E2229] text-sm leading-none">

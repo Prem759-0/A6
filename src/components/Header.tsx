@@ -135,6 +135,15 @@ export const Header: React.FC = () => {
                 <BookOpen className="w-4 h-4 text-emerald-600 opacity-80" /> Tea Journal
               </button>
               <button 
+                onClick={() => {
+                  setActivePage("account");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={`hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex cursor-pointer border-none bg-transparent text-[10px] md:text-xs font-semibold uppercase tracking-widest ${activePage === "account" ? "text-[#00838F] font-black" : "text-neutral-700"}`}
+              >
+                <User className="w-4 h-4 text-[#00838F]/85" /> My Account
+              </button>
+              <button 
                 onClick={() => setTrackingOpen(true)}
                 className="hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex text-[10px] md:text-xs font-semibold uppercase tracking-widest text-neutral-700 cursor-pointer"
               >

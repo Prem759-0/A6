@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useShop } from "../context/ShopContext";
 import { ProductIllustration } from "./ProductIllustration";
 import { X, Plus, Minus, Trash2, ShoppingBag, Gift, Check, ArrowRight } from "lucide-react";
 
 export const CartDrawer: React.FC = () => {
-  const { cart, isCartOpen, setCartOpen, updateQuantity, removeFromCart, clearCart } = useShop();
+  const { cart, isCartOpen, setCartOpen, updateQuantity, removeFromCart, clearCart, user, fetchOrders } = useShop();
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoError, setPromoError] = useState("");
@@ -24,6 +24,14 @@ export const CartDrawer: React.FC = () => {
   const discountAmount = subtotal * (discountPercent / 100);
   const total = subtotal - discountAmount + shippingFee;
 
+  // Auto-prefill if user is logged in
+  useEffect(() => {
+    if (user && isCartOpen) {
+      setEmail(user.email);
+      setFullName(user.name);
+    }
+  }, [user, isCartOpen]);
+
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
     const code = promoCode.trim().toUpperCase();
@@ -37,11 +45,39 @@ export const CartDrawer: React.FC = () => {
     }
   };
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !fullName || !address) {
       return;
     }
+    
+    // Submit order payload to MongoDB server API
+    const orderItems = cart.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity
+    }));
+
+    try {
+      await fetch("/api/orders/place", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userEmail: email,
+          items: orderItems,
+          total: total,
+          address: address
+        })
+      });
+      // Refresh user orders from inside the DB if logged in
+      if (user && user.email.toLowerCase() === email.toLowerCase()) {
+        await fetchOrders();
+      }
+    } catch (err) {
+      console.error("Failed to commit order into MongoDB collection:", err);
+    }
+
     setCheckoutStep(3);
     setTimeout(() => {
       clearCart();
