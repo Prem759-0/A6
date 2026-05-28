@@ -13,6 +13,7 @@ const DB_FILE = path.join(process.cwd(), "db.json");
 
 let mongoClient: MongoClient | null = null;
 let mongoDb: Db | null = null;
+let lastConnectionError: string | null = null;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // Ensure local db file exists (fallback virtual mode)
@@ -116,8 +117,11 @@ async function connectToMongo() {
           rowsAffected: 1
         });
       }
-    } catch (err) {
-      console.error("Failed to connect to real MongoDB. Defaulting to local local-first db.json simulator:", err);
+    } catch (err: any) {
+      lastConnectionError = err?.message || String(err);
+      console.log("ℹ️ Notice: MongoDB genuine Atlas connection is configured but currently restricted.");
+      console.log(`ℹ️ Connection error details: ${lastConnectionError}`);
+      console.log("💡 Tip: Double-check that MongoDB Atlas Network Access permits IP address '0.0.0.0/0' (Allow access from anywhere). Since this app is hosted on standard dynamic containers with multiple IPs, static whitelisting is not supported directly.");
       mongoClient = null;
       mongoDb = null;
     }
@@ -187,7 +191,8 @@ app.get("/api/mongodb/status", async (req, res) => {
           products: productsCount,
           mongodbLogs: logsCount
         },
-        logs
+        logs,
+        lastError: null
       });
     } catch (err) {
       res.status(500).json({ error: "Failed to read database schema telemetry" });
@@ -198,14 +203,17 @@ app.get("/api/mongodb/status", async (req, res) => {
       connected: false,
       cluster: "TwoLeaves-Bud-Cluster-0 (Local Simulator Mode)",
       version: "7.0.5 (Virtual)",
-      uri: "No MONGODB_URI key provided in context. Add one to environmental configs to run true MongoDB collections!",
+      uri: MONGODB_URI 
+        ? "MONGODB_URI key is detected but rejected/restricted from connecting by host safety rules." 
+        : "No MONGODB_URI key provided in context. Add one to environmental configs to run true MongoDB collections!",
       collections: {
         users: db.users?.length || 0,
         orders: db.orders?.length || 0,
         products: db.products?.length || 0,
         mongodbLogs: db.mongodbLogs?.length || 0
       },
-      logs: db.mongodbLogs || []
+      logs: db.mongodbLogs || [],
+      lastError: lastConnectionError
     });
   }
 });

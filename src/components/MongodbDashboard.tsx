@@ -36,10 +36,17 @@ export const MongodbDashboard: React.FC = () => {
           </button>
 
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20">
-              <span className="w-2.5 h-2.5 bg-green-400 rounded-full animate-ping" />
-              <span>MongoDB Online</span>
-            </span>
+            {mongodbStats?.connected ? (
+              <span className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20">
+                <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+                <span>Atlas Cloud Connected</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-amber-500 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20">
+                <span className="w-2.5 h-2.5 bg-amber-400 rounded-full" />
+                <span>Simulated Local Mode</span>
+              </span>
+            )}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -50,6 +57,32 @@ export const MongodbDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* CONNECTION ADVISORY / ATLAS WHITE-LISTING GUIDE */}
+        {mongodbStats?.lastError && (
+          <div className="mb-8 bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl p-5 text-amber-200 text-xs">
+            <h4 className="font-bold text-amber-300 mb-1.5 flex items-center gap-2 font-serif italic text-sm">
+              ⚠️ MongoDB Atlas Network Connection Filter Restriction Detected
+            </h4>
+            <p className="leading-relaxed mb-3">
+              Your custom <code className="bg-slate-900 px-1 py-0.5 rounded text-white font-mono text-[10px]">MONGODB_URI</code> environment key is detected, but connection was rejected by the database. In MongoDB Atlas, this usually triggers due to a SSL handshake check fail or dynamic IP access policies (TLSv1 alert 80).
+            </p>
+            <div className="bg-[#0B0F17] p-3 rounded-xl border border-slate-800 text-[11px] font-mono text-slate-400 mb-4 overflow-x-auto select-all max-h-36">
+              <span className="text-red-400 font-bold block mb-1">Atlas Response:</span>
+              {mongodbStats.lastError}
+            </div>
+            <div className="bg-amber-950/20 px-4 py-3.5 rounded-xl border border-amber-500/15">
+              <span className="font-bold text-amber-300 uppercase block tracking-wider text-[10px] mb-2 font-sans">💡 How to White-list and Resolve in 1 Minute:</span>
+              <ol className="list-decimal pl-4 space-y-2 text-slate-300 font-sans">
+                <li>Log into your <a href="https://cloud.mongodb.com" target="_blank" rel="noopener noreferrer" className="underline text-amber-400 hover:text-amber-300 font-bold">MongoDB Atlas Console</a>.</li>
+                <li>Go to <strong>Security &gt; Network Access</strong> inside your cluster dashboard.</li>
+                <li>Click <strong>Add IP Address</strong>.</li>
+                <li>Set the Access List Entry to <code className="bg-[#2B352E] px-2 py-0.5 rounded text-[#9CCC65] font-bold font-mono">0.0.0.0/0</code> (this authorizes dynamic secure Cloud Run containers to sync data).</li>
+                <li>Click <strong>Confirm</strong>. Wait 30 seconds for the Atlas cluster to propagate the routing firewall, then click the <strong className="underline text-teal-400 cursor-pointer hover:text-teal-300" onClick={handleRefresh}>Refresh button 🔄</strong> in the header!</li>
+              </ol>
+            </div>
+          </div>
+        )}
 
         {/* TOP STATUS CARD */}
         <div className="grid md:grid-cols-12 gap-6 mb-8">
@@ -63,32 +96,42 @@ export const MongodbDashboard: React.FC = () => {
                 <Database className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                  TwoLeaves-Bud-Cluster-0
-                  <span className="text-[10px] uppercase bg-green-900/30 text-green-300 px-2 py-0.5 rounded border border-green-700/20">Active</span>
+                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2 flex-wrap">
+                  {mongodbStats?.connected ? "TwoLeaves-Bud-AtlasDB" : "Local Virtual MongoDB"}
+                  <span className={`text-[9px] uppercase font-sans tracking-wide px-2 py-0.5 rounded border ${
+                    mongodbStats?.connected 
+                      ? "bg-green-950/40 text-green-300 border-green-500/25" 
+                      : "bg-amber-950/40 text-amber-400 border-amber-500/25 animate-pulse"
+                  }`}>
+                    {mongodbStats?.connected ? "Genuine Atlas Cloud" : "Local Sandbox"}
+                  </span>
                 </h2>
-                <p className="text-xs text-slate-400">Deployed instance in GCP Cloud Run Sandbox</p>
+                <p className="text-xs text-slate-400">
+                  {mongodbStats?.connected 
+                    ? "Synchronized with genuine remote serverless Atlas Cluster Collections" 
+                    : "Simulated secure local storage file database with MongoDB query console adapter"}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-800 text-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-slate-800 text-xs text-stone-200">
               <div>
-                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider">Database URI</span>
+                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider font-sans font-bold">Database URI</span>
                 <span className="text-slate-300 font-bold tracking-tight text-[11px] truncate block" title={mongodbStats?.uri}>
                   {mongodbStats?.uri || "mongodb+srv://admin:***@cluster0"}
                 </span>
               </div>
               <div>
-                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider">Driver Version</span>
-                <span className="text-[#00ACC1] font-bold block">Node.js {mongodbStats?.version || "7.0.5"}</span>
+                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider font-sans font-bold">Driver Version</span>
+                <span className="text-[#00ACC1] font-bold block">Node. {mongodbStats?.version || "7.0.5"}</span>
               </div>
               <div>
-                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider">Replica Set</span>
+                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider font-sans font-bold">Replica Set</span>
                 <span className="text-slate-300 font-bold block">atlas-rs0-shard</span>
               </div>
               <div>
-                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider">Cluster Host</span>
-                <span className="text-slate-300 font-bold block">GCP / Iowa (us-central1)</span>
+                <span className="text-slate-500 block mb-1 uppercase text-[10px] tracking-wider font-sans font-bold">Cluster Host</span>
+                <span className="text-slate-300 font-bold block">{mongodbStats?.connected ? "Atlas Global Shared" : "Local-First VM"}</span>
               </div>
             </div>
           </div>
@@ -104,10 +147,10 @@ export const MongodbDashboard: React.FC = () => {
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-slate-400">Read / Write Latency</span>
-                  <span className="text-emerald-400 font-bold">4.2 ms</span>
+                  <span className="text-emerald-400 font-bold">{mongodbStats?.connected ? "42 ms" : "3 ms"}</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500" style={{ width: "15%" }} />
+                  <div className="h-full bg-emerald-500" style={{ width: mongodbStats?.connected ? "45%" : "10%" }} />
                 </div>
               </div>
 
