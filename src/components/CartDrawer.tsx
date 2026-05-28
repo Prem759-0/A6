@@ -4,7 +4,7 @@ import { ProductIllustration } from "./ProductIllustration";
 import { X, Plus, Minus, Trash2, ShoppingBag, Gift, Check, ArrowRight } from "lucide-react";
 
 export const CartDrawer: React.FC = () => {
-  const { cart, isCartOpen, setCartOpen, updateQuantity, removeFromCart, clearCart, user, fetchOrders } = useShop();
+  const { cart, isCartOpen, setCartOpen, updateQuantity, removeFromCart, clearCart, user, fetchOrders, apiPlaceOrder } = useShop();
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoError, setPromoError] = useState("");
@@ -60,20 +60,12 @@ export const CartDrawer: React.FC = () => {
     }));
 
     try {
-      await fetch("/api/orders/place", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userEmail: email,
-          items: orderItems,
-          total: total,
-          address: address
-        })
+      await apiPlaceOrder({
+        userEmail: email,
+        items: orderItems,
+        total: total,
+        address: address
       });
-      // Refresh user orders from inside the DB if logged in
-      if (user && user.email.toLowerCase() === email.toLowerCase()) {
-        await fetchOrders();
-      }
     } catch (err) {
       console.error("Failed to commit order into MongoDB collection:", err);
     }

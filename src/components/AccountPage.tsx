@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { User, Lock, Mail, ShoppingBag, ArrowLeft, LogOut, CheckCircle2, Clock, Calendar, MapPin, Sparkles } from "lucide-react";
 
 export const AccountPage: React.FC = () => {
-  const { user, setUser, orders, fetchOrders, setActivePage, clearCart } = useShop();
+  const { user, setUser, orders, fetchOrders, setActivePage, clearCart, apiLogin, apiRegister, isStaticFrontendOnly } = useShop();
   
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -21,28 +21,21 @@ export const AccountPage: React.FC = () => {
     setSuccessMsg("");
     setLoading(true);
 
-    const url = isLogin ? "/api/auth/login" : "/api/auth/register";
-    const bodyObj = isLogin ? { email, password } : { email, password, name };
-
     try {
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyObj)
-      });
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        setError(data.error || "Authentication failed. Model error on MongoDB query.");
+      if (isLogin) {
+        const data = await apiLogin(email, password);
+        setSuccessMsg(isStaticFrontendOnly 
+          ? "Logged back in successfully via local virtual simulation!" 
+          : "Logged in successfully!");
       } else {
-        setUser(data.user);
-        setSuccessMsg(isLogin ? "Logged in successfully!" : "Account created and synced to MongoDB successfully!");
-        if (!isLogin) {
-          setIsLogin(true);
-        }
+        const data = await apiRegister(name, email, password);
+        setSuccessMsg(isStaticFrontendOnly 
+          ? "Account registered and saved locally in your browser sandbox!" 
+          : "Account created and synced to MongoDB successfully!");
+        setIsLogin(true);
       }
-    } catch (err) {
-      setError("Failed to communicate with MongoDB backend server.");
+    } catch (err: any) {
+      setError(err?.message || "Communication issue checking backend server credentials.");
     } finally {
       setLoading(false);
     }

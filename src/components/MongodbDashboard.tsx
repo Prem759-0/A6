@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { ArrowLeft, Terminal, Database, Server, Cpu, RefreshCw, Layers, ShieldCheck } from "lucide-react";
 
 export const MongodbDashboard: React.FC = () => {
-  const { mongodbLogs, mongodbStats, fetchMongodbStatus, setActivePage } = useShop();
+  const { mongodbLogs, mongodbStats, fetchMongodbStatus, setActivePage, isStaticFrontendOnly } = useShop();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -57,6 +57,27 @@ export const MongodbDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* REASONING OF THE 404 VERCEL ERROR / HYBRID LOCAL ADVISORY */}
+        {isStaticFrontendOnly && (
+          <div className="mb-8 bg-teal-500/10 border-2 border-teal-500/30 rounded-2xl p-6 text-slate-300 text-xs">
+            <h4 className="font-bold text-[#00ACC1] mb-2 flex items-center gap-2 text-sm uppercase tracking-wide">
+              ⚡ Web CDN Static Hosting Fallback Enabled (LocalStorage Simulator)
+            </h4>
+            <div className="space-y-2.5 text-slate-300">
+              <p className="leading-relaxed">
+                It looks like you are accessing this application on a static platform (such as <strong>Vercel (a6-three-nu.vercel.app)</strong> or Netlify). Because static platforms host <em>only</em> client-side static bundles, they cannot run long-running servers like the Express backend (<code className="bg-slate-900 px-1 py-0.5 rounded text-white font-mono text-[10px]">server.ts</code>), resulting in standard HTTP <code className="text-red-400">404 (Not Found)</code> logs on dynamic <code className="font-mono text-[10px] text-white">/api/*</code> endpoints.
+              </p>
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-[11px] font-mono text-cyan-450 leading-relaxed">
+                <span className="text-white font-bold block mb-1 font-sans">ℹ️ Client Fallback Enforced:</span>
+                The frontend has automatically decoupled and engaged a <strong>stateful Browser Local Sandbox</strong>. All product creation, account registrations, and ordering functions are 100% active and persistent on your local browser local-first simulation layer. No features are broken!
+              </div>
+              <div className="pt-2 text-slate-400 text-[11px]">
+                💡 <strong>To run with true dynamic live MongoDB Atlas:</strong> View this project on its stateful sandbox environments (like Google Cloud Run or local workspace with <code className="bg-slate-900 px-1 py-0.5 rounded text-white font-mono text-[9px]">npm run dev</code>) where the custom Express API proxies live traffic cleanly.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* CONNECTION ADVISORY / ATLAS WHITE-LISTING GUIDE */}
         {mongodbStats?.lastError && (

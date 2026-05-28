@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { ArrowLeft, Save, Sparkles, Check, Database, HelpCircle } from "lucide-react";
 
 export const AdminPage: React.FC = () => {
-  const { fetchCustomProducts, setActivePage } = useShop();
+  const { fetchCustomProducts, setActivePage, apiAddProduct, isStaticFrontendOnly } = useShop();
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("11.95");
@@ -44,23 +44,15 @@ export const AdminPage: React.FC = () => {
       price: Number(price),
       category,
       badgeText,
-      description: description || `Exceptional loose-leaf tea blend carefully plunked by hand.`,
+      description: description || `Exceptional loose-leaf tea blend carefully plucked by hand.`,
       steepTime: Number(steepTime) || 240,
       image: image || IMAGE_PRESETS[0].url,
       notes: notes || "Rich refreshing finish with hints of alpine forest leaves."
     };
 
     try {
-      const resp = await fetch("/api/products/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) {
-        throw new Error("Failed to insert custom product into MongoDB products collection.");
-      }
+      await apiAddProduct(payload);
       setSuccess(true);
-      await fetchCustomProducts(); // Reload products from MongoDB
       
       // Reset form fields
       setName("");

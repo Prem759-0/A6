@@ -52,6 +52,11 @@ interface ShopContextType {
   mongodbLogs: any[];
   mongodbStats: any;
   fetchMongodbStatus: () => Promise<any>;
+  isStaticFrontendOnly: boolean;
+  apiLogin: (email: string, password: string) => Promise<any>;
+  apiRegister: (name: string, email: string, password: string) => Promise<any>;
+  apiAddProduct: (payload: any) => Promise<any>;
+  apiPlaceOrder: (payload: { userEmail: string; items: any[]; total: number; address: string }) => Promise<any>;
 }
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
@@ -94,6 +99,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     uri: "mongodb+srv://admin:******@twoleaves-bud-cluster-0.mongodb.net/tea_store",
     collections: { users: 1, orders: 1, products: 0, mongodbLogs: 2 }
   });
+  const [isStaticFrontendOnly, setIsStaticFrontendOnly] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -104,33 +110,110 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   const fetchCustomProducts = async () => {
+    if (isStaticFrontendOnly) {
+      try {
+        const saved = localStorage.getItem("tea_custom_products");
+        setCustomProducts(saved ? JSON.parse(saved) : []);
+      } catch {
+        setCustomProducts([]);
+      }
+      return;
+    }
+
     try {
       const resp = await fetch("/api/products");
+      if (resp.status === 404) {
+        setIsStaticFrontendOnly(true);
+        const saved = localStorage.getItem("tea_custom_products");
+        setCustomProducts(saved ? JSON.parse(saved) : []);
+        return;
+      }
       if (resp.ok) {
         const data = await resp.json();
         setCustomProducts(data);
       }
     } catch (err) {
-      console.error("Failed to fetch custom products from MongoDB:", err);
+      console.warn("Failed to fetch custom products from MongoDB. Triggering local simulator:", err);
+      setIsStaticFrontendOnly(true);
+      const saved = localStorage.getItem("tea_custom_products");
+      setCustomProducts(saved ? JSON.parse(saved) : []);
     }
   };
 
   const fetchOrders = async () => {
     if (!user) return;
+    if (isStaticFrontendOnly) {
+      try {
+        const saved = localStorage.getItem("tea_simulated_orders");
+        const allOrders = saved ? JSON.parse(saved) : [];
+        const userOrders = allOrders.filter((o: any) => o.userEmail?.toLowerCase() === user.email.toLowerCase());
+        setOrders(userOrders);
+      } catch {
+        setOrders([]);
+      }
+      return;
+    }
+
     try {
       const resp = await fetch(`/api/orders?email=${encodeURIComponent(user.email)}`);
+      if (resp.status === 404) {
+        setIsStaticFrontendOnly(true);
+        const saved = localStorage.getItem("tea_simulated_orders");
+        const allOrders = saved ? JSON.parse(saved) : [];
+        setOrders(allOrders.filter((o: any) => o.userEmail?.toLowerCase() === user.email.toLowerCase()));
+        return;
+      }
       if (resp.ok) {
         const data = await resp.json();
         setOrders(data);
       }
     } catch (err) {
-      console.error("Failed to fetch orders from MongoDB:", err);
+      console.warn("Failed to fetch orders from MongoDB, falling back locally:", err);
+      setIsStaticFrontendOnly(true);
+      const saved = localStorage.getItem("tea_simulated_orders");
+      const allOrders = saved ? JSON.parse(saved) : [];
+      setOrders(allOrders.filter((o: any) => o.userEmail?.toLowerCase() === user.email.toLowerCase()));
     }
   };
 
-  const fetchMongodbStatus = async () => {
+  const fetchMongodbStatus = async (): Promise<any> => {
+    if (isStaticFrontendOnly) {
+      const simulatedProducts = JSON.parse(localStorage.getItem("tea_custom_products") || "[]");
+      const simulatedOrders = JSON.parse(localStorage.getItem("tea_simulated_orders") || "[]");
+      const simulatedUsers = JSON.parse(localStorage.getItem("tea_simulated_users") || "[]");
+      const mockLogs = [
+        { id: 1, action: "Simulated Cluster Active", timestamp: new Date().toISOString(), ip: "127.0.0.1", details: "Vercel / GitHub Static Pages Mode Active (Local Storage Fallback Enabled)" },
+        { id: 2, action: "Connection Route Offline", timestamp: new Date(Date.now() - 300000).toISOString(), ip: "static-edge-cdn", details: "Standard HTTP proxy failed or not hosted in fully stateful dynamic container. This is expected on static websites like Vercel or Netlify." },
+        { id: 3, action: "Local Persistence Init", timestamp: new Date(Date.now() - 600000).toISOString(), ip: "127.0.0.1", details: "Ensured local mock collections conform for offline sandbox sandbox operations." }
+      ];
+
+      const statsObj = {
+        connected: false,
+        cluster: "Virtual-Client-Sandbox (LocalStorage Mode)",
+        version: "v7.0.5 (Wedge Spec Node Simulation)",
+        uri: "Virtual Mongo Simulator (Static Host Detached Safe)",
+        collections: {
+          users: simulatedUsers.length,
+          orders: simulatedOrders.length,
+          products: simulatedProducts.length,
+          mongodbLogs: mockLogs.length
+        },
+        logs: mockLogs,
+        lastError: "Vercel/Static Host Warning: Custom dynamic API endpoint is offline inside standard static environment."
+      };
+
+      setMongodbLogs(mockLogs);
+      setMongodbStats(statsObj);
+      return statsObj;
+    }
+
     try {
       const resp = await fetch("/api/mongodb/status");
+      if (resp.status === 404) {
+        setIsStaticFrontendOnly(true);
+        // Let state propagate then run simulated mode next cycle
+        return;
+      }
       if (resp.ok) {
         const data = await resp.json();
         setMongodbLogs(data.logs || []);
@@ -139,13 +222,139 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           cluster: data.cluster,
           version: data.version,
           uri: data.uri,
-          collections: data.collections
+          collections: data.collections,
+          lastError: data.lastError
         });
         return data;
       }
     } catch (err) {
-      console.error("Failed to fetch MongoDB status:", err);
+      console.warn("Failed to catch MongoDB backend status, fallback to Virtual Mode:", err);
+      setIsStaticFrontendOnly(true);
     }
+  };
+
+  const apiLogin = async (emailInput: string, passwordInput: string) => {
+    if (isStaticFrontendOnly) {
+      const usersStr = localStorage.getItem("tea_simulated_users");
+      const usersList = usersStr ? JSON.parse(usersStr) : [];
+      const match = usersList.find((u: any) => u.email?.toLowerCase() === emailInput?.toLowerCase());
+      
+      if (!match) {
+        throw new Error("Invalid credentials in virtual local storage. Ensure you Register first!");
+      }
+      if (match.password !== passwordInput) {
+        throw new Error("Incorrect password for this virtual local-first account user.");
+      }
+      
+      const sessionUser = { name: match.name, email: match.email };
+      setUser(sessionUser);
+      return { user: sessionUser, status: "ok" };
+    }
+
+    const resp = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailInput, password: passwordInput })
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data.error || "Login backend verification failed.");
+    }
+    setUser(data.user);
+    return data;
+  };
+
+  const apiRegister = async (nameInput: string, emailInput: string, passwordInput: string) => {
+    if (isStaticFrontendOnly) {
+      const usersStr = localStorage.getItem("tea_simulated_users");
+      const usersList = usersStr ? JSON.parse(usersStr) : [];
+      
+      const exists = usersList.some((u: any) => u.email?.toLowerCase() === emailInput?.toLowerCase());
+      if (exists) {
+        throw new Error("This email is already registered on your virtual browser simulator sandbox.");
+      }
+
+      const newUser = { name: nameInput, email: emailInput, password: passwordInput };
+      usersList.push(newUser);
+      localStorage.setItem("tea_simulated_users", JSON.stringify(usersList));
+
+      const sessionUser = { name: nameInput, email: emailInput };
+      setUser(sessionUser);
+      return { user: sessionUser, status: "ok" };
+    }
+
+    const resp = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: nameInput, email: emailInput, password: passwordInput })
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      throw new Error(data.error || "Registration request rejected by db server.");
+    }
+    setUser(data.user);
+    return data;
+  };
+
+  const apiAddProduct = async (payload: any) => {
+    if (isStaticFrontendOnly) {
+      const productsStr = localStorage.getItem("tea_custom_products");
+      const productsList = productsStr ? JSON.parse(productsStr) : [];
+      
+      const newProduct = {
+        id: `custom_${Date.now()}`,
+        ...payload
+      };
+      
+      productsList.push(newProduct);
+      localStorage.setItem("tea_custom_products", JSON.stringify(productsList));
+      await fetchCustomProducts();
+      return { success: true, product: newProduct };
+    }
+
+    const resp = await fetch("/api/products/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const data = await resp.json();
+      throw new Error(data.error || "Insertion is rejected by MongoDB database schema.");
+    }
+    const data = await resp.json();
+    await fetchCustomProducts();
+    return data;
+  };
+
+  const apiPlaceOrder = async (orderPayload: { userEmail: string; items: any[]; total: number; address: string }) => {
+    if (isStaticFrontendOnly) {
+      const ordersStr = localStorage.getItem("tea_simulated_orders");
+      const ordersList = ordersStr ? JSON.parse(ordersStr) : [];
+      
+      const mockOrder = {
+        id: `TTL-${Math.floor(Math.random() * 89999 + 10000)}`,
+        ...orderPayload,
+        status: "processing",
+        createdAt: new Date().toISOString()
+      };
+      
+      ordersList.unshift(mockOrder);
+      localStorage.setItem("tea_simulated_orders", JSON.stringify(ordersList));
+      await fetchOrders();
+      return { success: true, orderId: mockOrder.id };
+    }
+
+    const resp = await fetch("/api/orders/place", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload)
+    });
+    if (!resp.ok) {
+      throw new Error("Could not submit order document to Atlas Database collections.");
+    }
+    const data = await resp.json();
+    await fetchOrders();
+    return data;
   };
 
   useEffect(() => {
@@ -390,7 +599,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchOrders,
         mongodbLogs,
         mongodbStats,
-        fetchMongodbStatus
+        fetchMongodbStatus,
+        isStaticFrontendOnly,
+        apiLogin,
+        apiRegister,
+        apiAddProduct,
+        apiPlaceOrder
       }}
     >
       {children}
