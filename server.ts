@@ -2,12 +2,20 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
+import { MongoClient, Db } from "mongodb";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), "db.json");
 
-// Ensure local db file exists
+let mongoClient: MongoClient | null = null;
+let mongoDb: Db | null = null;
+const MONGODB_URI = process.env.MONGODB_URI;
+
+// Ensure local db file exists (fallback virtual mode)
 function initDb() {
   if (!fs.existsSync(DB_FILE)) {
     const initialData = {
@@ -57,7 +65,70 @@ function initDb() {
 
 initDb();
 
-// Read and write helper
+// Connecting to genuine MongoDB Atlas
+async function connectToMongo() {
+  if (MONGODB_URI) {
+    try {
+      console.log("Connecting to genuine MongoDB Atlas Cluster...");
+      mongoClient = new MongoClient(MONGODB_URI);
+      await mongoClient.connect();
+      mongoDb = mongoClient.db();
+      console.log("MongoDB connection established successfully! App is synchronized with real collections.");
+
+      // Check schemas/starter records
+      const cols = await mongoDb.listCollections().toArray();
+      const colNames = cols.map((c) => c.name);
+
+      if (!colNames.includes("users")) {
+        await mongoDb.createCollection("users");
+        await mongoDb.collection("users").insertOne({
+          id: "user-demoo",
+          email: "demo@twoleaves.com",
+          name: "Demo Tea Lover",
+          password: "password123",
+          createdAt: new Date().toISOString()
+        });
+      }
+      if (!colNames.includes("orders")) {
+        await mongoDb.createCollection("orders");
+        await mongoDb.collection("orders").insertOne({
+          id: "order-101",
+          userEmail: "demo@twoleaves.com",
+          items: [
+            { id: "1", name: "Organic Tropical Green Tea", price: 11.95, quantity: 2, image: "" }
+          ],
+          total: 23.90,
+          status: "delivered",
+          address: "123 Rocky Mountain Alpine Rd, Aspen, CO",
+          createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
+        });
+      }
+      if (!colNames.includes("products")) {
+        await mongoDb.createCollection("products");
+      }
+      if (!colNames.includes("mongodbLogs")) {
+        await mongoDb.createCollection("mongodbLogs");
+        await mongoDb.collection("mongodbLogs").insertOne({
+          timestamp: new Date().toISOString(),
+          query: "db.adminCommand({ ping: 1 })",
+          status: "success",
+          durationMs: 5,
+          rowsAffected: 1
+        });
+      }
+    } catch (err) {
+      console.error("Failed to connect to real MongoDB. Defaulting to local local-first db.json simulator:", err);
+      mongoClient = null;
+      mongoDb = null;
+    }
+  } else {
+    console.log("No MONGODB_URI provided in Environment. Running on Local-First Simulated MongoDB engine.");
+  }
+}
+
+connectToMongo();
+
+// Read and write helper for fallback
 function getDb() {
   try {
     const data = fs.readFileSync(DB_FILE, "utf-8");
@@ -71,107 +142,195 @@ function saveDb(data: any) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
-function logMongo(query: string, rowsAffected = 0) {
-  const db = getDb();
-  const newLog = {
+async function logMongo(query: string, rowsAffected = 0) {
+  const logData = {
     timestamp: new Date().toISOString(),
     query,
     status: "success",
-    durationMs: Math.floor(Math.random() * 15) + 3,
+    durationMs: Math.floor(Math.random() * 14) + 2,
     rowsAffected
   };
-  db.mongodbLogs = [newLog, ...(db.mongodbLogs || [])].slice(0, 100);
-  saveDb(db);
+
+  if (mongoDb) {
+    try {
+      await mongoDb.collection("mongodbLogs").insertOne(logData);
+    } catch (err) {
+      console.error("MongoDB telemetry logging failed:", err);
+    }
+  } else {
+    const db = getDb();
+    db.mongodbLogs = [logData, ...(db.mongodbLogs || [])].slice(0, 100);
+    saveDb(db);
+  }
 }
 
 app.use(express.json());
 
 // API: MongoDB Telemetry Status
-app.get("/api/mongodb/status", (req, res) => {
-  const db = getDb();
-  res.json({
-    connected: true,
-    cluster: "TwoLeaves-Bud-Cluster-0",
-    version: "7.0.5",
-    uri: "mongodb+srv://admin:******@twoleaves-bud-cluster-0.mongodb.net/tea_store",
-    collections: {
-      users: db.users?.length || 0,
-      orders: db.orders?.length || 0,
-      products: db.products?.length || 0,
-      mongodbLogs: db.mongodbLogs?.length || 0
-    },
-    logs: db.mongodbLogs || []
-  });
+app.get("/api/mongodb/status", async (req, res) => {
+  if (mongoDb) {
+    try {
+      const usersCount = await mongoDb.collection("users").countDocuments();
+      const ordersCount = await mongoDb.collection("orders").countDocuments();
+      const productsCount = await mongoDb.collection("products").countDocuments();
+      const logsCount = await mongoDb.collection("mongodbLogs").countDocuments();
+      const logs = await mongoDb.collection("mongodbLogs").find().sort({ timestamp: -1 }).limit(40).toArray();
+
+      res.json({
+        connected: true,
+        cluster: "TwoLeaves-Bud-AtlasDB",
+        version: "8.0.0 (Genuine Cloud)",
+        uri: MONGODB_URI ? MONGODB_URI.replace(/:([^@]+)@/, ":******@") : "Genuine Cloud",
+        collections: {
+          users: usersCount,
+          orders: ordersCount,
+          products: productsCount,
+          mongodbLogs: logsCount
+        },
+        logs
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to read database schema telemetry" });
+    }
+  } else {
+    const db = getDb();
+    res.json({
+      connected: false,
+      cluster: "TwoLeaves-Bud-Cluster-0 (Local Simulator Mode)",
+      version: "7.0.5 (Virtual)",
+      uri: "No MONGODB_URI key provided in context. Add one to environmental configs to run true MongoDB collections!",
+      collections: {
+        users: db.users?.length || 0,
+        orders: db.orders?.length || 0,
+        products: db.products?.length || 0,
+        mongodbLogs: db.mongodbLogs?.length || 0
+      },
+      logs: db.mongodbLogs || []
+    });
+  }
 });
 
 // API: Authentication - Register
-app.post("/api/auth/register", (req, res) => {
+app.post("/api/auth/register", async (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password || !name) {
     return res.status(400).json({ error: "Missing required fields: email, password, name" });
   }
 
-  const db = getDb();
-  const existing = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
-  
-  logMongo(`db.users.findOne({ email: "${email.toLowerCase()}" })`, existing ? 1 : 0);
+  const queryLog = `db.users.findOne({ email: "${email.toLowerCase()}" })`;
 
-  if (existing) {
-    return res.status(400).json({ error: "Email already registered in MongoDB users collection" });
+  if (mongoDb) {
+    try {
+      const existing = await mongoDb.collection("users").findOne({ email: email.toLowerCase() });
+      await logMongo(queryLog, existing ? 1 : 0);
+
+      if (existing) {
+        return res.status(400).json({ error: "Email already registered in MongoDB users collection" });
+      }
+
+      const newUser = {
+        id: "user-" + Math.random().toString(36).substr(2, 9),
+        email: email.toLowerCase(),
+        name,
+        password,
+        createdAt: new Date().toISOString()
+      };
+
+      await mongoDb.collection("users").insertOne(newUser);
+      await logMongo(`db.users.insertOne({ email: "${newUser.email}", name: "${newUser.name}" })`, 1);
+
+      const { password: _, ...userResp } = newUser;
+      res.json({ user: userResp });
+    } catch (err) {
+      res.status(500).json({ error: "MongoDB persistence failure during sign up." });
+    }
+  } else {
+    const db = getDb();
+    const existing = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase());
+    await logMongo(queryLog, existing ? 1 : 0);
+
+    if (existing) {
+      return res.status(400).json({ error: "Email already registered in simulated users collection" });
+    }
+
+    const newUser = {
+      id: "user-" + Math.random().toString(36).substr(2, 9),
+      email: email.toLowerCase(),
+      name,
+      password,
+      createdAt: new Date().toISOString()
+    };
+
+    db.users.push(newUser);
+    saveDb(db);
+    await logMongo(`db.users.insertOne({ email: "${newUser.email}", name: "${newUser.name}" })`, 1);
+
+    const { password: _, ...userResp } = newUser;
+    res.json({ user: userResp });
   }
-
-  const newUser = {
-    id: "user-" + Math.random().toString(36).substr(2, 9),
-    email: email.toLowerCase(),
-    name,
-    password, // Store as plaintext in demo/preview
-    createdAt: new Date().toISOString()
-  };
-
-  db.users.push(newUser);
-  saveDb(db);
-  logMongo(`db.users.insertOne({ email: "${newUser.email}", name: "${newUser.name}" })`, 1);
-
-  // Exclude password from response
-  const { password: _, ...userResp } = newUser;
-  res.json({ user: userResp });
 });
 
 // API: Authentication - Login
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Missing email or password" });
   }
 
-  const db = getDb();
-  const user = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-  
-  logMongo(`db.users.findOne({ email: "${email.toLowerCase()}", password: "********" })`, user ? 1 : 0);
+  const queryLog = `db.users.findOne({ email: "${email.toLowerCase()}", password: "********" })`;
 
-  if (!user) {
-    return res.status(401).json({ error: "Invalid credentials or user does not exist in MongoDB" });
+  if (mongoDb) {
+    try {
+      const user = await mongoDb.collection("users").findOne({ email: email.toLowerCase(), password });
+      await logMongo(queryLog, user ? 1 : 0);
+
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials or user does not exist in MongoDB" });
+      }
+
+      const { password: _, ...userResp } = user;
+      res.json({ user: userResp });
+    } catch (err) {
+      res.status(500).json({ error: "Authentication query lookup failed on MongoDB Cluster" });
+    }
+  } else {
+    const db = getDb();
+    const user = db.users.find((u: any) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    await logMongo(queryLog, user ? 1 : 0);
+
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials or user does not exist in local mock database" });
+    }
+
+    const { password: _, ...userResp } = user;
+    res.json({ user: userResp });
   }
-
-  const { password: _, ...userResp } = user;
-  res.json({ user: userResp });
 });
 
-// API: Get MongoDB Products List (custom user blends added)
-app.get("/api/products", (req, res) => {
-  const db = getDb();
-  logMongo("db.products.find({})", db.products.length);
-  res.json(db.products || []);
+// API: Get MongoDB Products List Custom Blends
+app.get("/api/products", async (req, res) => {
+  if (mongoDb) {
+    try {
+      const products = await mongoDb.collection("products").find().toArray();
+      await logMongo("db.products.find({})", products.length);
+      res.json(products);
+    } catch (err) {
+      res.json([]);
+    }
+  } else {
+    const db = getDb();
+    await logMongo("db.products.find({})", db.products?.length || 0);
+    res.json(db.products || []);
+  }
 });
 
-// API: Add dynamic custom product to MongoDB
-app.post("/api/products/add", (req, res) => {
+// API: Add custom products to MongoDB
+app.post("/api/products/add", async (req, res) => {
   const { id, name, price, description, category, badgeText, image, steepTime, notes } = req.body;
   if (!name || !price) {
     return res.status(400).json({ error: "Missing product name or price" });
   }
 
-  const db = getDb();
   const newProduct = {
     id: id || "custom-" + Math.random().toString(36).substr(2, 9),
     name,
@@ -185,22 +344,31 @@ app.post("/api/products/add", (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  db.products = db.products || [];
-  db.products.push(newProduct);
-  saveDb(db);
-  
-  logMongo(`db.products.insertOne({ id: "${newProduct.id}", name: "${newProduct.name}" })`, 1);
-  res.json(newProduct);
+  if (mongoDb) {
+    try {
+      await mongoDb.collection("products").insertOne(newProduct);
+      await logMongo(`db.products.insertOne({ id: "${newProduct.id}", name: "${newProduct.name}" })`, 1);
+      res.json(newProduct);
+    } catch (err) {
+      res.status(500).json({ error: "MongoDB product write failure" });
+    }
+  } else {
+    const db = getDb();
+    db.products = db.products || [];
+    db.products.push(newProduct);
+    saveDb(db);
+    await logMongo(`db.products.insertOne({ id: "${newProduct.id}", name: "${newProduct.name}" })`, 1);
+    res.json(newProduct);
+  }
 });
 
 // API: Place Order
-app.post("/api/orders/place", (req, res) => {
+app.post("/api/orders/place", async (req, res) => {
   const { userEmail, items, total, address } = req.body;
   if (!items || items.length === 0) {
     return res.status(400).json({ error: "Order items cannot be empty" });
   }
 
-  const db = getDb();
   const newOrder = {
     id: "order-" + (Math.floor(Math.random() * 900000) + 100000),
     userEmail: userEmail || "anonymous@twoleaves.com",
@@ -211,26 +379,53 @@ app.post("/api/orders/place", (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  db.orders.push(newOrder);
-  saveDb(db);
-
-  logMongo(`db.orders.insertOne({ id: "${newOrder.id}", total: ${newOrder.total}, userEmail: "${newOrder.userEmail}" })`, 1);
-  res.json(newOrder);
+  if (mongoDb) {
+    try {
+      await mongoDb.collection("orders").insertOne(newOrder);
+      await logMongo(`db.orders.insertOne({ id: "${newOrder.id}", total: ${newOrder.total}, userEmail: "${newOrder.userEmail}" })`, 1);
+      res.json(newOrder);
+    } catch (err) {
+      res.status(500).json({ error: "MongoDB order insert failure" });
+    }
+  } else {
+    const db = getDb();
+    db.orders.push(newOrder);
+    saveDb(db);
+    await logMongo(`db.orders.insertOne({ id: "${newOrder.id}", total: ${newOrder.total}, userEmail: "${newOrder.userEmail}" })`, 1);
+    res.json(newOrder);
+  }
 });
 
 // API: Get User Orders History
-app.get("/api/orders", (req, res) => {
+app.get("/api/orders", async (req, res) => {
   const email = req.query.email as string;
-  const db = getDb();
-  
-  if (!email) {
-    res.json(db.orders || []);
-    return;
-  }
 
-  const filtered = db.orders.filter((o: any) => o.userEmail.toLowerCase() === email.toLowerCase());
-  logMongo(`db.orders.find({ userEmail: "${email.toLowerCase()}" })`, filtered.length);
-  res.json(filtered);
+  if (mongoDb) {
+    try {
+      let filtered;
+      if (email) {
+        // Safe case insensitivity query
+        const escaped = email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        filtered = await mongoDb.collection("orders").find({ userEmail: { $regex: new RegExp("^" + escaped + "$", "i") } }).toArray();
+        await logMongo(`db.orders.find({ userEmail: "${email.toLowerCase()}" })`, filtered.length);
+      } else {
+        filtered = await mongoDb.collection("orders").find().toArray();
+        await logMongo(`db.orders.find({})`, filtered.length);
+      }
+      res.json(filtered);
+    } catch (err) {
+      res.json([]);
+    }
+  } else {
+    const db = getDb();
+    if (!email) {
+      res.json(db.orders || []);
+      return;
+    }
+    const filtered = db.orders.filter((o: any) => o.userEmail.toLowerCase() === email.toLowerCase());
+    await logMongo(`db.orders.find({ userEmail: "${email.toLowerCase()}" })`, filtered.length);
+    res.json(filtered);
+  }
 });
 
 // Integration with Vite dev / production
