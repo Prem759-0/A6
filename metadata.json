@@ -1,0 +1,6 @@
+{
+  "name": "Two Leaves and a Bud",
+  "description": "A pixel-perfect, highly interactive and responsive clone of the Two Leaves and a Bud homepage, featuring rich tea categories, live product filtering, interactive latte sliders, and realistic sliding cart.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
