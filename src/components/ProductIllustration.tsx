@@ -257,5 +257,117 @@ export const ProductIllustration: React.FC<ProductIllustrationProps> = ({
           </div>
         </div>
       );
+
+    case "matcha-canister":
+      return (
+        <div className={`relative w-28 h-36 bg-gradient-to-b from-emerald-800 to-emerald-950 border-2 border-black rounded-xl shadow-lg flex flex-col overflow-hidden ${className}`}>
+          {/* Gold Lid */}
+          <div className="h-3.5 bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-400 border-b border-black"></div>
+          <div className="flex-1 p-2 flex flex-col justify-between items-center text-center relative">
+            <span className="text-[5px] text-amber-300 font-mono font-bold tracking-widest uppercase mt-0.5">UJI JAPAN</span>
+            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center relative my-1">
+              <span className="text-xl">🍵</span>
+            </div>
+            <div className="bg-[#FAF9F5] border border-black rounded p-1 w-full text-neutral-900 leading-none">
+              <span className="font-serif text-[8px] font-black block">Matcha Sieve</span>
+              <span className="text-[5px] text-stone-500 block uppercase tracking-wider mt-0.5Scale-90">CEREMONIAL</span>
+            </div>
+          </div>
+          <div className="h-1 bg-gradient-to-r from-neutral-400 to-neutral-200"></div>
+        </div>
+      );
+
+    case "jasmine-pearls":
+      return (
+        <div className={`relative w-28 h-36 bg-gradient-to-b from-purple-800 to-purple-950 border-2 border-black rounded-xl shadow-lg flex flex-col overflow-hidden ${className}`}>
+          {/* Wood Lid */}
+          <div className="h-3.5 bg-gradient-to-r from-amber-600 to-amber-900 border-b border-black"></div>
+          <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
+            <span className="text-[5px] text-purple-200 font-mono tracking-widest uppercase font-bold mt-0.5">DRAGON PEARLS</span>
+            <div className="w-8 h-8 rounded-full bg-black/15 flex items-center justify-center flex-wrap p-1 relative my-1">
+              <div className="w-2 h-2 bg-emerald-400 rounded-full border border-emerald-600 m-0.5 scale-95 shrink-0"></div>
+              <div className="w-2 h-2 bg-emerald-300 rounded-full border border-emerald-600 m-0.5 scale-110 shrink-0"></div>
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full border border-emerald-700 m-0.5 shrink-0"></div>
+            </div>
+            <div className="bg-[#FAF9F5] border border-black rounded p-1 w-full text-neutral-900 leading-none">
+              <span className="font-serif text-[7.5px] font-black block">Green Pearls</span>
+              <span className="text-[5px] text-purple-705 block uppercase mt-0.5">JASMINE</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "earl-grey":
+      return (
+        <div className={`relative w-28 h-36 bg-gradient-to-b from-[#1565C0] to-[#0D47A1] border-2 border-black rounded-xl shadow-lg flex flex-col overflow-hidden ${className}`}>
+          <div className="h-2.5 bg-[#FFD54F] border-b border-black flex items-center justify-center">
+            <div className="w-8 h-0.5 bg-black/45"></div>
+          </div>
+          <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
+            <span className="text-[5px] text-white/80 font-mono tracking-wider">ROYAL IMPERIAL</span>
+            <div className="w-10 h-10 my-0.5 rounded-full bg-white/5 border border-amber-300/30 flex items-center justify-center text-lg">
+              👑
+            </div>
+            <div className="bg-[#FAF9F5] border border-black rounded p-1.5 w-full text-neutral-900 leading-none font-sans">
+              <span className="font-serif text-[7.5px] font-extrabold block">Royal Earl Grey</span>
+              <span className="text-[5px] text-blue-900 block mt-0.5 tracking-wide">ORGANIC</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "iced-pouches":
+      return (
+        <div className={`relative w-28 h-36 bg-gradient-to-b from-rose-500 to-pink-700 border-2 border-black rounded-xl shadow-lg flex flex-col overflow-hidden ${className}`}>
+          <div className="h-4 bg-orange-400 border-b border-black flex items-center justify-center gap-1">
+            <div className="w-8 h-0.5 bg-neutral-950 opacity-20 rounded"></div>
+            <div className="w-1 h-1 rounded-full bg-neutral-950 opacity-35"></div>
+          </div>
+          <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
+            <span className="text-[5px] text-neutral-900 font-mono tracking-widest uppercase font-bold mt-0.5">BREEZE COLD BREW</span>
+            <div className="w-8 h-8 flex items-center justify-center relative my-1 text-xl">
+              🌺
+            </div>
+            <div className="bg-[#FAF9F5] border border-black rounded p-1 w-full text-neutral-900 leading-none">
+              <span className="font-serif text-[7.5px] font-black block">Hibiscus Breeze</span>
+              <span className="text-[5px] text-rose-500 block uppercase tracking-wide mt-0.5">ICED POUCHES</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "chamomile-serene":
+      return (
+        <div className={`relative w-28 h-36 bg-gradient-to-b from-yellow-300 to-amber-500 border-2 border-black rounded-xl shadow-lg flex flex-col overflow-hidden ${className}`}>
+          <div className="h-3 bg-white/40 border-b border-black"></div>
+          <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
+            <span className="text-[5px] text-neutral-800 font-mono tracking-wider font-extrabold leading-none mt-0.5">CAFFEINE-FREE ALPINES</span>
+            <div className="w-9 h-9 rounded-full bg-white/80 border border-amber-400 flex items-center justify-center text-lg my-1">
+              🌼
+            </div>
+            <div className="bg-[#FAF9F5] border border-black rounded p-1 w-full text-neutral-900 leading-none">
+              <span className="font-serif text-[7.5px] font-black block">Alpine Chamomile</span>
+              <span className="text-[5px] text-amber-750 block uppercase tracking-wide mt-0.5 font-bold">BIO-SACHETS</span>
+            </div>
+          </div>
+        </div>
+      );
+
+    case "peach-blossom":
+      return (
+        <div className={`relative w-28 h-36 bg-gradient-to-b from-orange-400 to-rose-400 border-2 border-black rounded-xl shadow-lg flex flex-col overflow-hidden ${className}`}>
+          <div className="h-3.5 bg-[#4CAF50] border-b border-black"></div>
+          <div className="flex-1 p-2 flex flex-col justify-between items-center text-center">
+            <span className="text-[5px] text-white font-mono tracking-wider leading-none font-bold mt-0.5">FRUIT BLOSSOMS</span>
+            <div className="w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-lg my-1">
+              🍑
+            </div>
+            <div className="bg-[#FAF9F5] border border-black rounded p-1.5 w-full text-neutral-900 leading-none">
+              <span className="font-serif text-[7.5px] font-black block">Peach Blossom</span>
+              <span className="text-[5px] text-amber-805 block uppercase tracking-wide mt-0.5">DELUXE TIN</span>
+            </div>
+          </div>
+        </div>
+      );
   }
 };

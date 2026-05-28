@@ -3,7 +3,7 @@ import { useShop } from "../context/ShopContext";
 import { ShoppingBag, Menu, X, ChevronDown, Award, Sparkles, BookOpen, User, Truck } from "lucide-react";
 
 export const Header: React.FC = () => {
-  const { cart, setCartOpen, activeCategory, setActiveCategory, setTrackingOpen } = useShop();
+  const { cart, setCartOpen, activeCategory, setActiveCategory, setTrackingOpen, activePage, setActivePage } = useShop();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -49,34 +49,56 @@ export const Header: React.FC = () => {
                   <button
                     key={cat.id}
                     onClick={() => {
+                      setActivePage("store");
                       setActiveCategory(cat.id);
-                      const el = document.getElementById("best-sellers-section");
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      setTimeout(() => {
+                        const el = document.getElementById("best-sellers-section");
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 100);
                     }}
                     className={`text-left px-3 py-2 rounded-md hover:bg-[#FAF9F5] transition-colors flex items-center justify-between cursor-pointer ${
-                      activeCategory === cat.id ? "text-[#00838F] bg-[#E0F2F1]/40 font-bold" : "text-neutral-700"
+                      activeCategory === cat.id && activePage === "store" ? "text-[#00838F] bg-[#E0F2F1]/40 font-bold" : "text-neutral-700"
                     }`}
                   >
                     <span>{cat.label}</span>
-                    {activeCategory === cat.id && <div className="w-1.5 h-1.5 rounded-full bg-[#00838F]" />}
+                    {activeCategory === cat.id && activePage === "store" && <div className="w-1.5 h-1.5 rounded-full bg-[#00838F]" />}
                   </button>
                 ))}
               </div>
             </div>
 
-            <a href="#origins-section" className="hover:text-[#00838F] transition-colors uppercase nav-link-hover inline-block">
+            <button 
+              onClick={() => {
+                setActivePage("origins");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              className={`hover:text-[#00838F] transition-colors uppercase nav-link-hover inline-block cursor-pointer border-none bg-transparent font-semibold tracking-widest text-xs ${activePage === "origins" ? "text-[#00838F] font-black" : "text-[#1E2229]"}`}
+            >
               Learn
-            </a>
+            </button>
 
-            <a href="#reviews-section" className="flex items-center gap-1 hover:text-[#00838F] transition-colors uppercase text-[#FF9800] nav-link-hover inline-block">
+            <button 
+              onClick={() => {
+                setActivePage("store");
+                setTimeout(() => {
+                  const el = document.getElementById("reviews-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 100);
+              }}
+              className="flex items-center gap-1 hover:text-[#00838F] transition-colors uppercase text-[#FF9800] nav-link-hover inline-block cursor-pointer border-none bg-transparent font-semibold tracking-widest text-xs"
+            >
               Reviews <span className="text-yellow-500 font-bold">★</span>
-            </a>
+            </button>
           </nav>
 
           {/* Central Logo Container */}
-          <a
-            href="#"
-            className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none group text-center"
+          <button
+            onClick={() => {
+              setActivePage("store");
+              setActiveCategory("all");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center select-none group text-center cursor-pointer border-none bg-transparent"
             aria-label="Two Leaves and a Bud Homepage"
           >
             <div className="flex items-center gap-1">
@@ -89,17 +111,29 @@ export const Header: React.FC = () => {
                 <span className="text-[9px] md:text-[11px] font-sans font-light text-neutral-500 uppercase tracking-widest leading-none">and a bud</span>
               </div>
             </div>
-          </a>
+          </button>
 
           {/* Right Navigation: Desktop */}
           <div className="flex items-center gap-4 md:gap-6">
             <nav className="hidden lg:flex items-center gap-6 text-[10px] md:text-xs font-semibold tracking-widest text-[#1E2229] uppercase">
-              <a href="#cafe-wholesale" className="hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex">
+              <button 
+                onClick={() => {
+                  setActivePage("wholesale");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={`hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex cursor-pointer border-none bg-transparent text-[10px] md:text-xs font-semibold uppercase tracking-widest ${activePage === "wholesale" ? "text-[#00838F] font-black" : "text-neutral-700"}`}
+              >
                 <Award className="w-4 h-4 text-amber-600 opacity-80" /> Cafe & Wholesale
-              </a>
-              <a href="#journal-section" className="hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex">
+              </button>
+              <button 
+                onClick={() => {
+                  setActivePage("journal");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={`hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex cursor-pointer border-none bg-transparent text-[10px] md:text-xs font-semibold uppercase tracking-widest ${activePage === "journal" ? "text-emerald-700 font-black" : "text-neutral-700"}`}
+              >
                 <BookOpen className="w-4 h-4 text-emerald-600 opacity-80" /> Tea Journal
-              </a>
+              </button>
               <button 
                 onClick={() => setTrackingOpen(true)}
                 className="hover:text-[#00838F] transition-colors flex items-center gap-1 nav-link-hover inline-flex text-[10px] md:text-xs font-semibold uppercase tracking-widest text-neutral-700 cursor-pointer"
@@ -160,13 +194,16 @@ export const Header: React.FC = () => {
                   <button
                     key={cat.id}
                     onClick={() => {
+                      setActivePage("store");
                       setActiveCategory(cat.id);
                       setMobileMenuOpen(false);
-                      const el = document.getElementById("best-sellers-section");
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      setTimeout(() => {
+                        const el = document.getElementById("best-sellers-section");
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 100);
                     }}
                     className={`text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                      activeCategory === cat.id
+                      activeCategory === cat.id && activePage === "store"
                         ? "bg-[#E0F2F1] text-[#00838F]"
                         : "text-neutral-700 hover:bg-neutral-50"
                     }`}
@@ -178,34 +215,49 @@ export const Header: React.FC = () => {
 
               <div className="mt-8 border-t border-neutral-100 pt-6 grid gap-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#00838F] mb-1">Company</h3>
-                <a
-                  href="#origins-section"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-neutral-700 font-semibold text-sm hover:text-[#00838F]"
+                <button
+                  onClick={() => {
+                    setActivePage("origins");
+                    setMobileMenuOpen(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className={`text-left font-semibold text-sm cursor-pointer border-none bg-transparent ${activePage === "origins" ? "text-[#00838F]" : "text-neutral-700"}`}
                 >
                   Our Origins & Story
-                </a>
-                <a
-                  href="#reviews-section"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-[#FF9800] font-semibold text-sm hover:opacity-80 flex items-center gap-1"
+                </button>
+                <button
+                  onClick={() => {
+                    setActivePage("store");
+                    setMobileMenuOpen(false);
+                    setTimeout(() => {
+                      const el = document.getElementById("reviews-section");
+                      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 100);
+                  }}
+                  className="text-left text-[#FF9800] font-semibold text-sm hover:opacity-80 flex items-center gap-1 cursor-pointer border-none bg-transparent"
                 >
                   Testimonials & Reviews ⭐
-                </a>
-                <a
-                  href="#cafe-wholesale"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-neutral-700 font-semibold text-sm hover:text-[#00838F]"
+                </button>
+                <button
+                  onClick={() => {
+                    setActivePage("wholesale");
+                    setMobileMenuOpen(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className={`text-left font-semibold text-sm cursor-pointer border-none bg-transparent ${activePage === "wholesale" ? "text-[#00838F]" : "text-neutral-700"}`}
                 >
                   Wholesale Coffee & Tea Program
-                </a>
-                <a
-                  href="#journal-section"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-neutral-700 font-semibold text-sm hover:text-[#00838F]"
+                </button>
+                <button
+                  onClick={() => {
+                    setActivePage("journal");
+                    setMobileMenuOpen(false);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className={`text-left font-semibold text-sm cursor-pointer border-none bg-transparent ${activePage === "journal" ? "text-emerald-700" : "text-neutral-700"}`}
                 >
                   Tea Journal Blog
-                </a>
+                </button>
               </div>
             </div>
 

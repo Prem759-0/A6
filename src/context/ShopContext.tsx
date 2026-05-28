@@ -26,6 +26,8 @@ interface ShopContextType {
   filteredProducts: Product[];
   activeCategory: string; // "all" | "tea-sachets" | "gifts-samplers" | "naked-sachets" | "latte-mix"
   setActiveCategory: (cat: string) => void;
+  activePage: string; // "store" | "wholesale" | "journal" | "origins"
+  setActivePage: (page: string) => void;
   isTrackingOpen: boolean;
   setTrackingOpen: (open: boolean) => void;
   selectedProduct: Product | null;
@@ -57,6 +59,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [searchQuery, setSearchQuery] = useState("");
   const [activeVibe, setActiveVibe] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [activePage, setActivePage] = useState("store");
 
   const [isTrackingOpen, setTrackingOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -263,6 +266,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         filteredProducts,
         activeCategory,
         setActiveCategory,
+        activePage,
+        setActivePage,
         isTrackingOpen,
         setTrackingOpen,
         selectedProduct,
