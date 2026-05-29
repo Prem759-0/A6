@@ -11,6 +11,34 @@ export const ProductIllustration: React.FC<ProductIllustrationProps> = ({
   badgeColor,
   className = "",
 }) => {
+  // If type begins with http, https, data:image, or a relative file-path, render the actual uploaded image in the physical packaging frame
+  if (type && (type.startsWith("http://") || type.startsWith("https://") || type.startsWith("data:identity") || type.startsWith("data:image/") || type.startsWith("/uploads/") || type.startsWith("/") || type.startsWith("blob:"))) {
+    return (
+      <div className={`relative w-36 h-48 bg-white border-2 border-black rounded-xl shadow-retro-small flex flex-col overflow-hidden ${className}`}>
+        {/* Top brand header strips */}
+        <div className="h-6 bg-[#1C231F] flex items-center justify-center text-[7px] font-bold text-stone-200 tracking-widest font-mono uppercase shrink-0">
+          🌿 CUSTOM BLEND 🌿
+        </div>
+        <div className="flex-1 relative bg-[#FAF9F5] flex items-center justify-center overflow-hidden p-2">
+          <img 
+            src={type} 
+            alt="Customer Blend Packaging" 
+            className="w-full h-full object-cover rounded-lg border border-neutral-300" 
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              // fallback placeholder if image fails to load
+              e.currentTarget.src = "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&q=80&w=200";
+            }}
+          />
+        </div>
+        {/* Bottom brand footer strips */}
+        <div className="h-5 bg-[#5D8B2C] flex items-center justify-center text-[6px] font-bold text-white tracking-widest uppercase shrink-0">
+          100% Organic Sachets
+        </div>
+      </div>
+    );
+  }
+
   // Return different SVG structures depending on product type to look like the real physical boxes!
   switch (type) {
     case "tropical-green":

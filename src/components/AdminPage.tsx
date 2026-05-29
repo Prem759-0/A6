@@ -22,7 +22,8 @@ import {
   Sliders,
   Clock,
   CheckCircle,
-  Truck
+  Truck,
+  Upload
 } from "lucide-react";
 import { ProductIllustration } from "./ProductIllustration";
 
@@ -75,6 +76,11 @@ export const AdminPage: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [selectedIllustration, setSelectedIllustration] = useState("jasmine-pearls");
 
+  // Modern dynamic image-choice states for Product creation
+  const [imageType, setImageType] = useState<"preset" | "url" | "upload">("preset");
+  const [customImageUrl, setCustomImageUrl] = useState("");
+  const [customFileBase64, setCustomFileBase64] = useState("");
+
   // Dynamic Category Creator form state
   const [newCatLabel, setNewCatLabel] = useState("");
   const [newCatId, setNewCatId] = useState("");
@@ -93,7 +99,30 @@ export const AdminPage: React.FC = () => {
   const [editDescription, setEditDescription] = useState("");
   const [editStock, setEditStock] = useState("");
 
+  // Edit modal image choice states
+  const [editImageType, setEditImageType] = useState<"preset" | "url" | "upload">("preset");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editFileBase64, setEditFileBase64] = useState("");
+  const [editPreset, setEditPreset] = useState("jasmine-pearls");
+
   const [allOrders, setAllOrders] = useState<any[]>([]);
+
+  // File Upload Helper to convert binary images to client-safe Base64 String
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      if (isEdit) {
+        setEditFileBase64(base64String);
+      } else {
+        setCustomFileBase64(base64String);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Function to load all simulated order database records
   const loadAllOrders = () => {
@@ -118,11 +147,37 @@ export const AdminPage: React.FC = () => {
     setEditDescription(p.description || "");
     const stockVal = productStocks[p.id] !== undefined ? productStocks[p.id] : 10;
     setEditStock(String(stockVal));
+
+    // Prepopulate images configuration based on active product's structure
+    const imgStr = p.image || "";
+    if (imgStr.startsWith("http://") || imgStr.startsWith("https://")) {
+      setEditImageType("url");
+      setEditImageUrl(imgStr);
+      setEditFileBase64("");
+      setEditPreset("jasmine-pearls");
+    } else if (imgStr.startsWith("data:") || imgStr.startsWith("blob:")) {
+      setEditImageType("upload");
+      setEditFileBase64(imgStr);
+      setEditImageUrl("");
+      setEditPreset("jasmine-pearls");
+    } else {
+      setEditImageType("preset");
+      setEditPreset(imgStr || "jasmine-pearls");
+      setEditImageUrl("");
+      setEditFileBase64("");
+    }
   };
 
   const handleSaveEditModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+
+    // Resolve what image property value to update
+    const finalImage = editImageType === "url" 
+      ? (editImageUrl.trim() || "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&q=80&w=200")
+      : editImageType === "upload" 
+      ? (editFileBase64 || "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&q=80&w=200")
+      : editPreset;
 
     // Save fields
     updateProductDetails(editingProduct.id, {
@@ -130,7 +185,8 @@ export const AdminPage: React.FC = () => {
       price: Number(editPrice) || 10.00,
       category: editCategory,
       badgeText: editBadgeText,
-      description: editDescription
+      description: editDescription,
+      image: finalImage
     });
 
     // Update stock
@@ -245,14 +301,20 @@ export const AdminPage: React.FC = () => {
       return;
     }
 
+    const finalImage = imageType === "url" 
+      ? (customImageUrl.trim() || "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&q=80&w=200")
+      : imageType === "upload" 
+      ? (customFileBase64 || "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&q=80&w=200")
+      : selectedIllustration;
+
     const payload = {
       name: name.trim(),
       price: Number(price),
       category,
       badgeText: badgeText.trim() || "NEW BLEND",
-      description: description.trim() || "Exceptional loose-leaf tea blend carefully plucked in high altitudes.",
+      description: description.trim() || "Exceptional loose-leaf tea sachet blend carefully plucked in high altitudes.",
       steepTime: Number(steepTime) || 240,
-      image: selectedIllustration,
+      image: finalImage,
       notes: notes.trim() || "Rich refreshing finish with hints of forest wind and morning mountain steam."
     };
 
@@ -266,6 +328,9 @@ export const AdminPage: React.FC = () => {
       setNotes("");
       setBadgeText("HERITAGE");
       setSteepTime("240");
+      setCustomImageUrl("");
+      setCustomFileBase64("");
+      setImageType("preset");
       
       // Auto refresh ledger list
       fetchCustomProducts();
@@ -511,46 +576,141 @@ export const AdminPage: React.FC = () => {
 
               <form onSubmit={handleProductSubmit} className="space-y-6">
                 
-                {/* Visual preset selection section */}
-                <div className="border bg-[#FAF9F5]/80 rounded-2xl p-4 border-neutral-200">
-                  <h3 className="text-xs font-mono font-black uppercase tracking-widest text-[#00838F] mb-3 flex items-center gap-1.5">
-                    <span>🎨 step 1: choose botanical visual packaging artwork preset</span>
+                {/* Visual preset & custom image/upload selection section */}
+                <div className="border bg-[#FAF9F5]/80 rounded-2xl p-5 border-neutral-200">
+                  <h3 className="text-xs font-mono font-black uppercase tracking-widest text-[#00838F] mb-4 flex items-center gap-1.5 justify-between">
+                    <span>🎨 step 1: choose packaging design or custom illustration</span>
+                    <span className="text-[9px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full font-bold">Image Uploader Ready</span>
                   </h3>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 h-[250px] overflow-y-auto pr-1 no-scrollbar border-b border-neutral-250/20 pb-4">
-                    {ILLUSTRATION_PRESETS.map((preset) => (
+                  {/* Tabs header */}
+                  <div className="flex gap-1.5 border-b border-slate-200 pb-3 mb-4">
+                    {[
+                      { id: "preset", label: "🎨 Presets" },
+                      { id: "url", label: "🌐 Image Web URL" },
+                      { id: "upload", label: "📤 Upload Custom Image" }
+                    ].map((tab) => (
                       <button
-                        key={preset.type}
+                        key={tab.id}
                         type="button"
-                        onClick={() => {
-                          setSelectedIllustration(preset.type);
-                          setCategory(preset.category);
-                        }}
-                        className={`p-2 border-2 rounded-xl text-left bg-white hover:bg-neutral-50 transition-all flex flex-col items-center justify-between cursor-pointer ${
-                          selectedIllustration === preset.type 
-                            ? "border-[#00838F] bg-teal-50/20 ring-2 ring-[#00ACC1]/50 scale-[1.03]" 
-                            : "border-neutral-300 opacity-80"
+                        onClick={() => setImageType(tab.id as any)}
+                        className={`flex-1 py-2 px-3 text-[10px] uppercase tracking-wider font-extrabold rounded-lg border-2 transition-all cursor-pointer ${
+                          imageType === tab.id 
+                            ? "bg-[#00838F] text-white border-black shadow-retro-sm" 
+                            : "bg-white text-stone-600 hover:bg-neutral-100 border-neutral-300"
                         }`}
                       >
-                        <ProductIllustration type={preset.type} badgeColor="bg-emerald-600" className="scale-[0.55] -my-11 pointer-events-none" />
-                        <span className="text-[8px] font-sans font-bold text-center mt-1 leading-tight line-clamp-2 w-full text-neutral-800">
-                          {preset.label}
-                        </span>
+                        {tab.label}
                       </button>
                     ))}
                   </div>
 
+                  {/* Tab Body: presets */}
+                  {imageType === "preset" && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 h-[250px] overflow-y-auto pr-1 no-scrollbar border-b border-neutral-200 pb-4">
+                      {ILLUSTRATION_PRESETS.map((preset) => (
+                        <button
+                          key={preset.type}
+                          type="button"
+                          onClick={() => {
+                            setSelectedIllustration(preset.type);
+                            setCategory(preset.category);
+                          }}
+                          className={`p-2 border-2 rounded-xl text-left bg-white hover:bg-neutral-50 transition-all flex flex-col items-center justify-between cursor-pointer ${
+                            selectedIllustration === preset.type 
+                              ? "border-[#00838F] bg-teal-50/20 ring-2 ring-[#00ACC1]/50 scale-[1.03]" 
+                              : "border-neutral-300 opacity-80"
+                          }`}
+                        >
+                          <ProductIllustration type={preset.type} badgeColor="bg-emerald-600" className="scale-[0.55] -my-11 pointer-events-none" />
+                          <span className="text-[8px] font-sans font-bold text-center mt-1 leading-tight line-clamp-2 w-full text-neutral-800">
+                            {preset.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Tab Body: URL */}
+                  {imageType === "url" && (
+                    <div className="bg-white border border-neutral-200 rounded-xl p-4 space-y-3 mb-4">
+                      <label className="text-[10px] uppercase font-mono font-bold tracking-wider text-neutral-500 block">
+                        paste external image web url (jpg/png/webp)
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="e.g. https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&q=80&w=400"
+                        value={customImageUrl}
+                        onChange={(e) => setCustomImageUrl(e.target.value)}
+                        className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2.5 px-3.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                      />
+                      <p className="text-[9px] text-neutral-400 leading-normal">
+                        Provide a direct URL to showcase custom tea sachet photos, raw farm images, or unique mockups.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Tab Body: upload */}
+                  {imageType === "upload" && (
+                    <div className="bg-white border border-neutral-200 rounded-xl p-4 space-y-4 mb-4">
+                      <div className="border-3 border-dashed border-neutral-300 rounded-xl p-6 text-center bg-stone-50/50 hover:bg-stone-50 transition-colors relative flex flex-col items-center justify-center cursor-pointer min-h-[140px]">
+                        <Upload className="w-8 h-8 text-neutral-400 mb-2" />
+                        <span className="text-xs font-bold text-neutral-700">Click to Browse local files</span>
+                        <span className="text-[10px] text-neutral-400 mt-1 font-mono">Accepts PNG, JPG, WEBP formats</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(e, false)}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </div>
+                      
+                      {customFileBase64 && (
+                        <div className="flex items-center gap-3 bg-teal-50 border border-teal-200 p-2.5 rounded-lg">
+                          <div className="w-10 h-10 border border-neutral-350 rounded overflow-hidden shrink-0">
+                            <img src={customFileBase64} alt="Pre-upload thumb" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-teal-850 truncate text-[11px]">Sachet Illustration Uploaded</p>
+                            <p className="text-[9px] text-teal-600 font-mono">Base64 conversion ready for Mongo ingestion</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setCustomFileBase64("")}
+                            className="text-xs text-rose-500 font-bold hover:underline bg-transparent border-none cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Active selected packaging showcase */}
                   <div className="mt-4 flex flex-col sm:flex-row items-center gap-4 bg-white border border-neutral-200 rounded-xl p-3">
-                    <span className="text-xs text-neutral-400 font-mono hidden sm:block">Real-time SVG Output Preview:</span>
+                    <span className="text-xs text-neutral-400 font-mono hidden sm:block">Product Output Preview:</span>
                     <div className="scale-75 -my-5">
-                      <ProductIllustration type={selectedIllustration} badgeColor="bg-[#00838F]" />
+                      <ProductIllustration 
+                        type={
+                          imageType === "url" 
+                            ? customImageUrl 
+                            : imageType === "upload" 
+                            ? customFileBase64 
+                            : selectedIllustration
+                        } 
+                        badgeColor="bg-[#00838F]" 
+                      />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-neutral-800">
-                        Preset Style: <span className="font-mono text-[#00838F]">{selectedIllustration}</span>
+                        Design Type: <span className="font-mono text-[#00838F] uppercase">{imageType}</span>
                       </h4>
-                      <p className="text-[10px] text-neutral-500 mt-1">This SVG vector box template will render in high fidelity on the client catalog, featuring the exact botanical badges and brand layout.</p>
+                      <p className="text-[10px] text-neutral-500 mt-1 leading-normal">
+                        {imageType === "preset" 
+                          ? `Using standard botanical packaging preset "${selectedIllustration}".`
+                          : "Using custom responsive image assets. The live catalog sachet graphic will wrap this dynamic photo in active tea badges automatically."
+                        }
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1072,15 +1232,107 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                  <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1 font-bold">
                     blending notes & catalog details
                   </label>
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
                   />
+                </div>
+
+                {/* Edit Modal image customization tabs */}
+                <div className="border bg-[#FAF9F5]/70 rounded-2xl p-4 border-neutral-250 mt-1">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[9px] uppercase font-mono font-black tracking-widest text-[#00838F]">Product Image source</span>
+                    <span className="text-[8px] bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded font-bold uppercase">{editImageType}</span>
+                  </div>
+
+                  <div className="flex gap-1 border-b border-neutral-200 pb-2 mb-2.5">
+                    {[
+                      { id: "preset", label: "🎨 Presets" },
+                      { id: "url", label: "🌐 Web URL" },
+                      { id: "upload", label: "📤 Upload File" }
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setEditImageType(tab.id as any)}
+                        className={`flex-1 py-1 px-1.5 text-[8px] uppercase font-bold rounded-md border transition-all cursor-pointer ${
+                          editImageType === tab.id 
+                            ? "bg-slate-800 text-white border-black" 
+                            : "bg-white text-stone-600 hover:bg-neutral-50 border-neutral-250"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {editImageType === "preset" && (
+                    <div className="space-y-1">
+                      <label className="text-[8px] uppercase font-bold text-neutral-400 block tracking-wider">Choice Preset Botanical Packaging:</label>
+                      <select
+                        value={editPreset}
+                        onChange={(e) => setEditPreset(e.target.value)}
+                        className="w-full bg-white border border-neutral-300 rounded-lg p-1.5 text-xs font-semibold focus:outline-none"
+                      >
+                        {ILLUSTRATION_PRESETS.map((preset) => (
+                          <option key={preset.type} value={preset.type}>{preset.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {editImageType === "url" && (
+                    <div className="space-y-1">
+                      <label className="text-[8px] uppercase font-bold text-neutral-400 block tracking-wider">Paste External direct image URL:</label>
+                      <input
+                        type="url"
+                        value={editImageUrl}
+                        onChange={(e) => setEditImageUrl(e.target.value)}
+                        placeholder="e.g. https://domain.com/picture.jpg"
+                        className="w-full bg-white border border-neutral-300 rounded-lg p-1.5 text-xs"
+                      />
+                    </div>
+                  )}
+
+                  {editImageType === "upload" && (
+                    <div className="space-y-1.5">
+                      <label className="text-[8px] uppercase font-bold text-neutral-400 block tracking-wider">Upload / Select local Image:</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(e, true)}
+                        className="w-full text-[10px] text-stone-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[9px] file:font-semibold file:bg-[#00838F] file:text-white hover:file:bg-[#00ACC1] cursor-pointer"
+                      />
+                      {editFileBase64 && (
+                        <div className="flex items-center gap-1.5 bg-teal-50 p-1.5 rounded-lg border border-teal-200">
+                          <img src={editFileBase64} alt="Thumb" className="w-6 h-6 object-cover rounded" />
+                          <span className="text-[8.5px] text-teal-700 font-mono font-bold truncate max-w-[180px]">New design uploaded successfully</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tiny live preview within edit modal */}
+                  <div className="mt-2 flex items-center gap-2.5 bg-white p-1.5 border border-neutral-200 rounded-lg justify-between">
+                    <span className="text-[9px] font-mono text-neutral-400">Live updated illustration:</span>
+                    <div className="scale-50 -my-7 shrink-0">
+                      <ProductIllustration 
+                        type={
+                          editImageType === "url" 
+                            ? editImageUrl 
+                            : editImageType === "upload" 
+                            ? editFileBase64 
+                            : editPreset
+                        } 
+                        badgeColor="bg-teal-500" 
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2.5 pt-3 border-t border-neutral-150">
@@ -1093,7 +1345,7 @@ export const AdminPage: React.FC = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-[#00838F] hover:bg-[#00ACC1] text-white font-bold text-xs rounded-xl border-2 border-black shadow-retro-sm transition-all hover:translate-y-0.5 cursor-pointer flex items-center gap-1"
+                    className="px-4 py-2 bg-[#00838F] hover:bg-[#00ACC1] text-white font-bold text-xs rounded-xl border-2 border-black shadow-retro-sm transition-all hover:translate-y-0.5 cursor-pointer flex items-center gap-1 animate-pulse"
                   >
                     <Save className="w-4 h-4" />
                     <span>commit updateOne()</span>
