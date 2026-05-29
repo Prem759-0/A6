@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { ShopProvider, useShop } from "./context/ShopContext";
 import { Header } from "./components/Header";
 import { CartDrawer } from "./components/CartDrawer";
@@ -102,19 +103,13 @@ function MainAppContent() {
     editedProducts
   } = useShop();
 
-  // New states for the custom product showcased inside the banner container
-  const [heroActiveTab, setHeroActiveTab] = useState<"brew" | "featured">("brew");
-  const [heroFeaturedProductId, setHeroFeaturedProductId] = useState<string>("prod-1");
+  // Hero section premium products slider index
+  const [heroSliderIndex, setHeroSliderIndex] = useState(0);
 
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
-  const [viewStyle, setViewStyle] = useState<"carousel" | "grid">("grid");
+  const [viewStyle, setViewStyle] = useState<"carousel" | "grid">("carousel");
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
-
-  // Hero Interactive Tea Brewer local state
-  const [brewTea, setBrewTea] = useState<"alpine" | "matcha" | "grey" | "mint">("alpine");
-  const [isHeroSteeping, setIsHeroSteeping] = useState(false);
-  const [heroTimer, setHeroTimer] = useState(0);
 
   const allAvailableProducts = [...PRODUCTS, ...customProducts]
     .filter((p) => !deletedProductIds.includes(p.id))
@@ -123,55 +118,7 @@ function MainAppContent() {
       return ed ? { ...p, ...ed } : p;
     });
 
-  const activeShowcaseProduct = allAvailableProducts.find(p => p.id === heroFeaturedProductId) || allAvailableProducts[0];
-
-  // Hero Steeping Timer countdown tick
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isHeroSteeping && heroTimer > 0) {
-      interval = setInterval(() => {
-        setHeroTimer((prev) => {
-          if (prev <= 1) {
-            setIsHeroSteeping(false);
-            try {
-              const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-              if (AudioCtx) {
-                const ctx = new AudioCtx();
-                const now = ctx.currentTime;
-                // Double happy chime
-                const osc1 = ctx.createOscillator();
-                const gain1 = ctx.createGain();
-                osc1.type = "sine";
-                osc1.frequency.setValueAtTime(523.25, now); // C5
-                gain1.gain.setValueAtTime(0.1, now);
-                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                osc1.connect(gain1);
-                gain1.connect(ctx.destination);
-                osc1.start(now);
-                osc1.stop(now + 0.4);
-
-                const osc2 = ctx.createOscillator();
-                const gain2 = ctx.createGain();
-                osc2.type = "sine";
-                osc2.frequency.setValueAtTime(659.25, now + 0.15); // E5
-                gain2.gain.setValueAtTime(0.1, now + 0.15);
-                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-                osc2.connect(gain2);
-                gain2.connect(ctx.destination);
-                osc2.start(now + 0.15);
-                osc2.stop(now + 0.5);
-              }
-            } catch (err) {}
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isHeroSteeping, heroTimer]);
+  const activeShowcaseProduct = allAvailableProducts[heroSliderIndex % allAvailableProducts.length] || allAvailableProducts[0];
 
   // References for horizontal scrolling of products with touch-drag and swipe support
   const productScrollRef = useRef<HTMLDivElement>(null);
@@ -250,23 +197,42 @@ function MainAppContent() {
         <div className="absolute top-24 left-1/3 w-64 h-64 bg-[#5D8B2C]/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-8 md:gap-16 items-center relative z-10">
-          
-          {/* Hero left-hand text banner content */}
-          <div className="col-span-12 md:col-span-6 space-y-7 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-[#5D8B2C]/15 border border-[#5D8B2C]/35 px-4 py-1.5 rounded-full text-[10px] font-mono tracking-widest text-[#A2C97A] uppercase">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#A2C97A] animate-ping" />
-              <span>🌱 100% Biodegradable Plant Sachets</span>
-            </div>
+              {/* Hero left-hand text banner content */}
+          <div className="col-span-12 md:col-span-6 space-y-8 text-center md:text-left">
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="inline-flex items-center gap-2 bg-[#5D8B2C]/20 border border-[#5D8B2C]/40 px-4 py-2 rounded-full text-[10.5px] font-mono tracking-widest text-[#A2C97A] uppercase shadow-lg shadow-black/25"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#A2C97A] animate-ping" />
+              <span>🌱 100% Biodegradable Plant Sachets & Whole Leaf purity</span>
+            </motion.div>
 
-            <h1 className="font-serif italic font-black text-4.5xl md:text-6.5xl tracking-tight leading-[1.1] text-white">
-              A cup that fits <br className="hidden md:block" /> the <span className="text-[#A2C97A] font-light">quietest</span> moment.
-            </h1>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
+              className="font-serif italic font-black text-5xl md:text-7xl lg:text-[76px] tracking-tight leading-[1.05] text-white"
+            >
+              A cup that fits <br className="hidden md:block" /> the <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#A2C97A] via-[#C5E1A5] to-green-300 font-light font-serif drop-shadow-md">quietest</span> moment.
+            </motion.h1>
             
-            <p className="text-xs md:text-sm text-stone-300 font-light max-w-lg leading-relaxed">
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="text-sm md:text-base text-stone-300 font-light max-w-lg leading-relaxed"
+            >
               Experience whole-leaf organic tea sachets and artisanal matcha crafted for slow living. Plucked in alignment with centuries-old agricultural cycles, each cup reveals the purest story of mountain moisture, rich crop soil, and tranquil devotion.
-            </p>
+            </motion.p>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start pt-2">
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start pt-2"
+            >
               <button
                 onClick={() => {
                   const el = document.getElementById("best-sellers-section");
@@ -282,361 +248,166 @@ function MainAppContent() {
                   setActivePage("origins");
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                className="text-xs font-bold uppercase tracking-widest text-stone-200 hover:text-[#A2C97A] transition-colors flex items-center gap-2 group py-2 bg-transparent border-none cursor-pointer"
+                className="text-xs font-bold uppercase tracking-widest text-stone-250 hover:text-[#A2C97A] transition-colors flex items-center gap-2 group py-2 bg-transparent border-none cursor-pointer"
               >
                 <span>Read Our Tea Story</span>
                 <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-250" />
               </button>
-            </div>
+            </motion.div>
           </div>
 
-          {/* Hero right-hand: Dynamic Switchable visual tea scene & Admin Products Showcase */}
+          {/* Hero right-hand: Redesigned Premium Custom Product Showcase Slider */}
           <div className="col-span-12 md:col-span-6 flex flex-col items-center">
-            
-            {/* Header Switch Toggles */}
-            <div className="flex gap-2 p-1 bg-[#15241C] border border-stone-800 rounded-xl w-full max-w-sm mb-4">
-              <button
-                type="button"
-                onClick={() => setHeroActiveTab("brew")}
-                className={`flex-1 py-2 text-[10px] uppercase font-bold tracking-wider rounded-lg transition-all cursor-pointer border-none ${
-                  heroActiveTab === "brew" 
-                    ? "bg-[#DFE3DE] text-[#1E2922] font-black" 
-                    : "text-stone-400 hover:text-stone-200"
-                }`}
-              >
-                🍵 Brew Station
-              </button>
-              <button
-                type="button"
-                onClick={() => setHeroActiveTab("featured")}
-                className={`flex-1 py-2 text-[10px] uppercase font-bold tracking-wider rounded-lg transition-all cursor-pointer border-none ${
-                  heroActiveTab === "featured" 
-                    ? "bg-[#DFE3DE] text-[#1E2922] font-black" 
-                    : "text-stone-400 hover:text-stone-200"
-                }`}
-              >
-                ⭐ Feature Blend
-              </button>
-            </div>
+            <div className="relative p-7 bg-[#1A2520]/85 rounded-3xl border border-stone-800 shadow-2xl backdrop-blur-md max-w-md w-full flex flex-col text-stone-100 overflow-hidden min-h-[500px]">
+              
+              {/* Subtle background graphics and brand leaf highlights */}
+              <div className="absolute inset-0 pointer-events-none opacity-20 z-0 overflow-hidden">
+                <span className="absolute top-10 left-10 text-3xl opacity-30 animate-pulse">🍃</span>
+                <span className="absolute bottom-10 right-10 text-3xl opacity-30 animate-bounce" style={{ animationDuration: "8s" }}>🍵</span>
+                <div className="absolute -right-20 -bottom-20 w-44 h-44 rounded-full bg-[#5D8B2C]/10 blur-3xl"></div>
+              </div>
 
-            {heroActiveTab === "brew" ? (
-              <div className="relative p-6 bg-[#2B352E]/90 rounded-3xl border border-stone-700/50 shadow-2xl backdrop-blur-md max-w-md w-full flex flex-col items-center">
-                {/* Scattered Floating Berries & Tea Leaves in Background */}
-                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-                  <span className="absolute top-2 left-2 text-xl animate-bounce opacity-40" style={{ animationDuration: "5s" }}>🍓</span>
-                  <span className="absolute top-4 right-3 text-lg opacity-30 animate-pulse">🍃</span>
-                  <span className="absolute bottom-4 left-2 text-base opacity-20 animate-bounce" style={{ animationDuration: "6s" }}>🌿</span>
-                  <span className="absolute bottom-10 right-4 text-sm opacity-25 animate-pulse">✨</span>
-                </div>
+              {/* Slider Header bar */}
+              <div className="flex justify-between items-center mb-4 z-10 border-b border-stone-800/60 pb-3">
+                <span className="text-[9px] font-mono tracking-widest text-[#A2C97A] uppercase font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Curated Heritage Showcase
+                </span>
+                <span className="text-[10px] font-mono bg-[#1E2E25] px-2.5 py-0.5 rounded-full border border-stone-800 text-[#DFE3DE]">
+                  {allAvailableProducts.length > 0 ? `${(heroSliderIndex % allAvailableProducts.length) + 1} / ${allAvailableProducts.length}` : "0 / 0"}
+                </span>
+              </div>
 
-                {/* Small Category Tabs at Top */}
-                <div className="flex justify-between items-center w-full gap-1 mb-5 bg-[#1C231F] p-1 border border-stone-800 rounded-xl z-10">
-                  {[
-                    { id: "alpine", label: "Alpine Red", emoji: "🍓" },
-                    { id: "matcha", label: "Uji Matcha", emoji: "🍵" },
-                    { id: "grey", label: "Earl Grey", emoji: "🍊" },
-                    { id: "mint", label: "Peppermint", emoji: "🌿" }
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setBrewTea(item.id as any);
-                        setIsHeroSteeping(false);
-                        setHeroTimer(0);
-                      }}
-                      className={`flex-1 py-1.5 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex flex-col items-center justify-center gap-1 cursor-pointer border-none ${
-                        brewTea === item.id 
-                          ? "bg-[#DFE3DE] text-[#1E2922] shadow-sm font-bold" 
-                          : "text-stone-400 hover:text-stone-200 hover:bg-white/5"
-                      }`}
+              {/* Interactive Slide Animation */}
+              <div className="flex-1 flex flex-col relative z-10 select-none">
+                <AnimatePresence mode="wait">
+                  {activeShowcaseProduct ? (
+                    <motion.div
+                      key={activeShowcaseProduct.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.35, ease: "easeInOut" }}
+                      className="flex-1 flex flex-col"
                     >
-                      <span>{item.emoji}</span>
-                      <span className="hidden sm:inline">{item.label}</span>
-                    </button>
-                  ))}
-                </div>
+                      {/* Product Illustration Container with Left & Right Floating Arrows inside for incredible interaction */}
+                      <div className="relative w-full flex justify-center py-6 bg-gradient-to-b from-stone-900/60 to-transparent rounded-2xl mb-5 h-44 items-center border border-stone-800/40 shadow-inner group">
+                        
+                        {/* Custom visual glow aura behind illustration */}
+                        <div className="absolute w-28 h-28 rounded-full bg-[#5D8B2C]/15 blur-2xl pointer-events-none"></div>
 
-                {/* Dynamic Brew Station Vessel Illustration (Includes Animated Teapot + Tea Carton + Cup!) */}
-                <div className="relative w-full h-64 bg-[#1C231F] border border-stone-800/80 rounded-2xl flex items-center justify-between p-4 overflow-hidden z-10">
-                  {/* 1. White Ceramic Teapot (Tilted and pouring when steeping!) */}
-                  <div 
-                    className={`absolute left-3 top-5 transition-all duration-700 ease-in-out z-20 origin-bottom-right ${
-                      isHeroSteeping ? "transform rotate-[18deg] translate-y-2 translate-x-3 scale-110" : "hover:scale-105"
-                    }`}
-                  >
-                    <svg viewBox="0 0 100 80" className="w-20 h-16 drop-shadow-xl text-stone-100">
-                      <path d="M 12 45 C 5 35 15 25 30 35 C 28 38 18 42 12 45 Z" fill="#FAF9F5" stroke="#4A524C" strokeWidth="1.5" />
-                      <path d="M 75 40 C 95 30 90 65 75 55" fill="none" stroke="#FAF9F5" strokeWidth="5.5" strokeLinecap="round" />
-                      <ellipse cx="52" cy="48" rx="26" ry="22" fill="#FAF9F5" stroke="#4A524C" strokeWidth="2" />
-                      <ellipse cx="52" cy="46" rx="24" ry="19" fill="#FDFDFB" />
-                      <path d="M 38 28 C 38 22 66 22 66 28 Z" fill="#FAF9F5" stroke="#4A524C" strokeWidth="1.5" />
-                      <circle cx="52" cy="22" r="3.5" fill="#DFE3DE" />
-                    </svg>
-                    <span className="absolute -bottom-1 left-5 text-[7px] font-mono text-stone-500 uppercase tracking-widest">porcelain</span>
-                  </div>
-
-                  {/* Hot pouring liquid stream representation */}
-                  {isHeroSteeping && (
-                    <div className="absolute left-[20px] top-[34px] w-[50px] h-[75px] pointer-events-none z-10 overflow-hidden">
-                      <svg viewBox="0 0 50 100" className="w-full h-full">
-                        <path 
-                          d="M 12 0 Q 30 40 40 100" 
-                          fill="none" 
-                          stroke={brewTea === "alpine" ? "#EF4444" : brewTea === "matcha" ? "#10B981" : brewTea === "grey" ? "#F59E0B" : "#14B8A6"} 
-                          strokeWidth="3" 
-                          strokeDasharray="4,4"
-                          className="animate-pulse"
-                        />
-                      </svg>
-                    </div>
-                  )}
-
-                  {/* 2. Brand Tea Packaging Box Representation */}
-                  <div className="absolute right-4 bottom-4 w-18 h-32 bg-[#FAF9F5] rounded-xl border border-stone-800 shadow-lg p-2 flex flex-col justify-between hover:scale-105 transition-transform z-10 text-stone-900">
-                    <div className="border-b border-dashed border-stone-300 pb-1 text-center">
-                      <span className="text-[6px] font-black uppercase text-[#5D8B2C] tracking-wider font-mono">
-                        {brewTea === "alpine" ? "Alpine Red" :
-                         brewTea === "matcha" ? "Organic Matcha" :
-                         brewTea === "grey" ? "Calabrian Grey" : "Peppermint"}
-                      </span>
-                    </div>
-                    <div className="my-auto text-center flex flex-col justify-center">
-                      <span className="font-serif italic font-bold text-[8px] leading-tight text-stone-800">two leaves</span>
-                      <span className="text-[5.5px] uppercase font-light text-stone-500 tracking-widest leading-none mt-0.5">and a bud</span>
-                    </div>
-                    <div className="bg-[#5D8B2C] text-white text-[5px] font-mono font-bold text-center py-0.5 rounded-sm uppercase tracking-wide">
-                      {brewTea === "matcha" ? "Barista Grade" : "Compostable"}
-                    </div>
-                  </div>
-
-                  {/* 3. Glass Tea Mug Base visual centered/aligned */}
-                  <div className="absolute left-[92px] bottom-4 w-28 h-24 flex flex-col justify-end z-20">
-                    {/* Mug Handle */}
-                    <div className="absolute right-[-10px] top-4 w-8 h-12 border-3 border-stone-500/50 rounded-r-2xl z-0 bg-transparent transform rotate-12"></div>
-                    {/* Mug Glass Body */}
-                    <div className="w-full h-[85%] border-3 border-t-0 border-stone-400/60 rounded-b-2xl relative overflow-hidden bg-white/5 flex flex-col justify-end p-0.5 shadow-inner z-10">
-                      {/* Glowing Liquid Infusion Layer (color matches active select brewTea) */}
-                      <div 
-                        className={`w-full transition-all duration-700 relative rounded-b-xl ${
-                          isHeroSteeping ? "h-[90%] saturate-150 brightness-110" : "h-[75%]"
-                        } ${
-                          brewTea === "alpine" ? "bg-[#962121]/70 shadow-[inset_0_0_15px_rgba(185,28,28,0.4)]" :
-                          brewTea === "matcha" ? "bg-[#2E5A27]/85 shadow-[inset_0_0_15px_rgba(46,90,39,0.5)]" :
-                          brewTea === "grey" ? "bg-[#7A4B1A]/70 shadow-[inset_0_0_15px_rgba(122,75,26,0.5)]" :
-                          "bg-[#1A5C50]/55 shadow-[inset_0_0_15px_rgba(26,92,80,0.3)]"
-                        }`}
-                      >
-                        {/* Active Rising Steam Vector Lanes - Staggered animations */}
-                        {isHeroSteeping && (
-                          <div className="absolute bottom-6 flex justify-center gap-2 w-full opacity-65">
-                            <div className="w-0.5 h-12 bg-white/40 rounded-full blur-[1px] transform -translate-y-2 animate-bounce"></div>
-                            <div className="w-0.5 h-10 bg-white/30 rounded-full blur-[2px] transform -translate-y-4 delay-100 animate-bounce"></div>
-                          </div>
-                        )}
-
-                        {/* Interactive floating elements inside cup */}
-                        {brewTea === "alpine" && (
-                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                            <span className="absolute top-2 left-4 text-[10px] animate-bounce opacity-75">🍓</span>
-                            <span className="absolute top-6 right-6 text-[10px] animate-pulse opacity-65">🍒</span>
-                          </div>
-                        )}
-
-                        {brewTea === "matcha" && (
-                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                            <div className="absolute top-0 w-full h-2 bg-[#a2c97a] opacity-85 border-b border-green-900 rounded-t-sm flex justify-around">
-                              <span className="w-1.5 h-1 bg-green-200/40 rounded-full"></span>
-                              <span className="w-1.5 h-1 bg-green-200/50 rounded-full"></span>
-                            </div>
-                            <span className="absolute top-3 left-4 text-xs animate-pulse opacity-75">🍃</span>
-                          </div>
-                        )}
-
-                        {brewTea === "grey" && (
-                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                            <span className="absolute top-2 left-4 text-xs animate-bounce opacity-75">🍊</span>
-                          </div>
-                        )}
-
-                        {brewTea === "mint" && (
-                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                            <span className="absolute top-2 left-4 text-xs animate-pulse opacity-85">🌿</span>
-                          </div>
-                        )}
-
-                        {/* Swirling tea bubbles inside cup */}
-                        <div className="absolute bottom-1 right-2 flex gap-1.5 opacity-30">
-                          <span className="w-1 h-1 bg-white rounded-full"></span>
-                          <span className="w-1.5 h-1.5 bg-white rounded-full delay-200"></span>
-                        </div>
-                      </div>
-
-                      {/* Glass glare line overlay */}
-                      <div className="absolute left-3 top-2 w-1 h-[80%] bg-white/20 rounded-full pointer-events-none"></div>
-                    </div>
-                  </div>
-
-                  {/* Sachet Steeper String Hanging Out */}
-                  <div className={`absolute left-[134px] transition-all duration-500 w-0.5 bg-dashed bg-amber-100/40 border-l border-[#885A1D]/30 z-30 ${
-                    isHeroSteeping ? "bottom-14 h-16" : "bottom-10 h-12"
-                  }`}>
-                    <div className="absolute -bottom-1 -left-1.5 w-3.5 h-3.5 rounded-full bg-[#EF5350] text-[5px] font-black text-white flex items-center justify-center uppercase select-none cursor-pointer">
-                      tb
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dynamic Brewing controls styled as an elegant Artisan Card */}
-                <div className="w-full mt-4 bg-[#FAF9F5] rounded-2xl p-4 text-stone-900 border border-stone-300 shadow-md z-10">
-                  <div className="flex justify-between items-start gap-4 mb-3">
-                    <div>
-                      <h4 className="font-serif italic font-extrabold text-[#1a2d24] text-xs leading-none">
-                        {brewTea === "alpine" ? "Alpine Berry Herbal" :
-                         brewTea === "matcha" ? "Ceremonial Kyoto Matcha" :
-                         brewTea === "grey" ? "Organic Earl Grey Black" :
-                         "Peppermint Herbal Breeze"}
-                      </h4>
-                      <p className="text-[8px] font-bold text-stone-400 font-mono tracking-widest mt-1.5 uppercase leading-none">
-                        {brewTea === "alpine" ? "🍃 Caffeine-Free • 208°F Infusion" :
-                         brewTea === "matcha" ? "⚡ Super Antioxidant • 175°F Whisk" :
-                         brewTea === "grey" ? "☕ Active Energy • 205°F Standard" :
-                         "🌿 Soil-Association Approved • 208°F"}
-                      </p>
-                    </div>
-
-                    {/* Dynamic Action Trigger Button */}
-                    <div>
-                      {isHeroSteeping ? (
-                        <div className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 animate-pulse">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          <span>{heroTimer}s</span>
-                        </div>
-                      ) : (
+                        {/* Slide Nav Arrow: Left */}
                         <button
                           type="button"
-                          onClick={() => {
-                            setHeroTimer(5);
-                            setIsHeroSteeping(true);
-                          }}
-                          className="bg-[#1E2922] hover:bg-[#2D3E33] text-white font-bold text-[9px] uppercase tracking-widest px-3 py-2 rounded-lg transition-transform active:scale-95 cursor-pointer border-none"
+                          onClick={() => setHeroSliderIndex(prev => prev > 0 ? prev - 1 : allAvailableProducts.length - 1)}
+                          className="absolute left-3 w-10 h-10 rounded-full bg-[#FAF9F5] text-neutral-900 flex items-center justify-center border-2 border-black hover:bg-[#5D8B2C] hover:text-white transition-all transform active:scale-95 shadow-[2px_2px_0px_#000000] cursor-pointer z-20"
+                          aria-label="Previous showcase product"
                         >
-                          Steep It
+                          <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
                         </button>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Flavor Notes Deck */}
-                  <div className="bg-[#FAF9F5] border-t border-dashed border-stone-200 pt-2.5 mt-2.5 flex justify-between items-center text-[10px] text-stone-600">
-                    <span className="italic font-serif leading-tight">
-                      “{brewTea === "alpine" ? "Rich tart berry blend of real organic hibiscus, blackberry leaves & raspberry" :
-                        brewTea === "matcha" ? "Vibrant stone-ground Japanese Uji tea offering clean earthy umami warmth" :
-                        brewTea === "grey" ? "Robust Indian organic black tea flavored with oil of real Italian bergamots" :
-                        "Extremely aromatic whole peppermint leaves bringing crisp local crop freshness"}”
-                    </span>
-                    
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const productMap = {
-                          alpine: { id: "1", name: "Alpine Berry", price: 14.00, image: "alpine", badgeText: "HERBAL TEA" },
-                          matcha: { id: "4", name: "Ceremonial Matcha", price: 28.00, image: "matcha", badgeText: "BARISTA STANDARD" },
-                          grey: { id: "2", name: "Organic Earl Grey", price: 14.00, image: "earl-grey", badgeText: "BLACK TEA" },
-                          mint: { id: "3", name: "Peppermint Leaves", price: 14.00, image: "peppermint", badgeText: "HERBAL MINT" }
-                        };
-                        addToCart(productMap[brewTea]);
-                      }}
-                      className="shrink-0 bg-[#00838F] hover:bg-[#006064] text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg ml-3 cursor-pointer border-none"
-                    >
-                      + Bag
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-6 bg-[#2B352E]/95 rounded-3xl border border-stone-700/60 shadow-2xl backdrop-blur-md max-w-md w-full flex flex-col text-stone-100">
-                {/* Product picker */}
-                <div className="mb-4">
-                  <label className="text-[9px] uppercase font-mono tracking-widest text-[#A2C97A] block mb-1.5 font-bold">
-                    Select a Catalog Blend to Feature:
-                  </label>
-                  <select
-                    value={heroFeaturedProductId}
-                    onChange={(e) => setHeroFeaturedProductId(e.target.value)}
-                    className="w-full bg-[#1C231F] border border-stone-700 rounded-lg p-2 text-xs font-semibold text-stone-250 focus:outline-none focus:ring-1 focus:ring-[#A2C97A]"
-                  >
-                    {allAvailableProducts.map((p) => (
-                      <option key={p.id} value={p.id} className="text-black">
-                        {p.name} (${p.price.toFixed(2)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                        {/* Scalable Visual Sachet representation */}
+                        <div className="transform scale-[0.85] hover:scale-95 transition-transform duration-300 z-10">
+                          <ProductIllustration 
+                            type={activeShowcaseProduct.image} 
+                            badgeColor="bg-[#5D8B2C]" 
+                          />
+                        </div>
 
-                {/* Show active product container */}
-                {activeShowcaseProduct && (
-                  <div className="bg-[#1C231F] border border-stone-800 rounded-2xl p-4 flex flex-col items-center relative overflow-hidden">
-                    {/* Badge ribbon */}
-                    {activeShowcaseProduct.badgeText && (
-                      <div className="absolute top-2.5 right-2.5 bg-gradient-to-r from-amber-400 to-amber-500 text-stone-950 font-mono font-black text-[7px] uppercase px-2 py-0.5 rounded-md shadow-sm z-20">
-                        {activeShowcaseProduct.badgeText}
+                        {/* Slide Nav Arrow: Right */}
+                        <button
+                          type="button"
+                          onClick={() => setHeroSliderIndex(prev => prev + 1)}
+                          className="absolute right-3 w-10 h-10 rounded-full bg-[#FAF9F5] text-neutral-900 flex items-center justify-center border-2 border-black hover:bg-[#5D8B2C] hover:text-white transition-all transform active:scale-95 shadow-[2px_2px_0px_#000000] cursor-pointer z-20"
+                          aria-label="Next showcase product"
+                        >
+                          <ChevronRight className="w-5 h-5 stroke-[2.5]" />
+                        </button>
                       </div>
-                    )}
 
-                    {/* Sachet visual wrapper */}
-                    <div className="w-full flex justify-center py-4 bg-gradient-to-b from-stone-900/40 to-transparent rounded-xl mb-4 h-32 items-center">
-                      <div className="scale-75 hover:scale-[0.8] transition-transform duration-300">
-                        <ProductIllustration 
-                          type={activeShowcaseProduct.image} 
-                          badgeColor="bg-[#5D8B2C]" 
-                        />
+                      {/* Product Badge Ribbon */}
+                      <div className="flex items-center gap-2 mb-2">
+                        {activeShowcaseProduct.badgeText && (
+                          <span className="bg-[#DFE3DE] text-[#1E2922] font-mono font-black text-[8px] uppercase tracking-wider px-2 py-0.5 rounded-md shadow-sm border border-neutral-300">
+                            {activeShowcaseProduct.badgeText}
+                          </span>
+                        )}
+                        <span className="text-[9px] font-mono text-stone-400 font-bold">
+                          ⏱ {activeShowcaseProduct.steepTime || 240}s steeping
+                        </span>
                       </div>
-                    </div>
 
-                    {/* Details content */}
-                    <div className="w-full space-y-2">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-serif italic font-extrabold text-white text-sm line-clamp-1">
+                      {/* Name & Responsive Price row */}
+                      <div className="flex justify-between items-baseline gap-4 mb-2.5">
+                        <h3 className="font-serif italic font-black text-2xl text-white tracking-tight line-clamp-1">
                           {activeShowcaseProduct.name}
-                        </h4>
-                        <span className="font-mono text-xs font-bold text-[#A2C97A] shrink-0 bg-[#A2C97A]/10 px-2 py-0.5 rounded border border-[#A2C97A]/20">
+                        </h3>
+                        <span className="font-mono text-base font-extrabold text-[#A2C97A] bg-[#A2C97A]/10 px-3 py-0.5 rounded-lg border border-[#A2C97A]/25 whitespace-nowrap">
                           ${activeShowcaseProduct.price.toFixed(2)}
                         </span>
                       </div>
 
-                      <p className="text-[10px] text-stone-400 leading-normal font-light line-clamp-2">
+                      {/* Description with line containment */}
+                      <p className="text-stone-300 text-xs font-light leading-relaxed mb-4 line-clamp-2">
                         {activeShowcaseProduct.description}
                       </p>
 
+                      {/* Organic aroma quote block */}
                       {activeShowcaseProduct.notes && (
-                        <div className="border-t border-dashed border-stone-800 pt-2 flex flex-col gap-0.5">
-                          <span className="text-[8px] uppercase font-mono tracking-widest text-[#5D8B2C] font-bold">Natural notes:</span>
-                          <span className="text-[10px] italic font-serif text-[#DFE3DE] line-clamp-1">
+                        <div className="mt-auto bg-[#131E18]/60 border-l-4 border-[#5D8B2C] p-3 rounded-r-xl border border-y-stone-800 border-r-stone-800 bg-[#16221D] mb-5">
+                          <span className="text-[8px] uppercase font-mono tracking-widest text-[#A2C97A] font-bold block mb-1">
+                            Aromatic Composition:
+                          </span>
+                          <span className="text-stone-200 italic font-serif text-[11px] leading-snug">
                             “{activeShowcaseProduct.notes}”
                           </span>
                         </div>
                       )}
 
-                      {/* Add to chart footer */}
-                      <div className="border-t border-stone-800 pt-3 mt-1 flex justify-between items-center">
-                        <span className="text-[9px] font-mono text-stone-500 uppercase">
-                          ☕ steep time • {activeShowcaseProduct.steepTime || 240}s
-                        </span>
-                        
+                      {/* Add directly to Bag controls */}
+                      <div className="border-t border-stone-800/80 pt-4 flex gap-4 items-center mt-auto">
+                        <div className="text-stone-400 text-[10px] font-mono">
+                          🌱 Soil Association Organic Approved
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => addToCart(activeShowcaseProduct)}
-                          className="bg-[#5D8B2C] hover:bg-[#6FA434] text-white font-bold text-[10px] uppercase tracking-wider py-1.5 px-3.5 rounded-lg transition-transform active:scale-95 cursor-pointer border-none"
+                          className="flex-1 bg-[#5D8B2C] hover:bg-[#6FA434] active:scale-[0.97] transition-all text-white font-bold text-xs uppercase tracking-widest py-3.5 px-4 rounded-xl border border-stone-900/40 shadow-lg cursor-pointer flex items-center justify-center gap-2"
                         >
-                          + Add to Bag
+                          <span>+ Add to Bag</span>
+                          <span className="text-xs opacity-75">🛍</span>
                         </button>
                       </div>
+                    </motion.div>
+                  ) : (
+                    <div className="flex-1 flex flex-col justify-center items-center text-center p-6 text-stone-400 italic">
+                      No products available at the moment. Add some in the Admin Panel!
                     </div>
-                  </div>
-                )}
+                  )}
+                </AnimatePresence>
               </div>
-            )}
+
+              {/* Small Dot Nav Indicators as requested "option to see like have in reviews" */}
+              {allAvailableProducts.length > 0 && (
+                <div className="flex justify-center gap-1.5 mt-5">
+                  {allAvailableProducts.map((p, idx) => {
+                    const isActive = (heroSliderIndex % allAvailableProducts.length) === idx;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setHeroSliderIndex(idx)}
+                        className={`h-1.5 transition-all rounded-full cursor-pointer border-none ${
+                          isActive ? "w-6 bg-[#A2C97A]" : "w-1.5 bg-stone-700 hover:bg-stone-500"
+                        }`}
+                        title={`Go to slide ${idx + 1}`}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
 
