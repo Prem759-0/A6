@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useShop } from "../context/ShopContext";
+import { PRODUCTS } from "../data";
 import { motion } from "motion/react";
 import { 
   ArrowLeft, 
@@ -14,7 +15,8 @@ import {
   Cpu, 
   Power, 
   Server, 
-  RefreshCw 
+  RefreshCw,
+  Plus
 } from "lucide-react";
 import { ProductIllustration } from "./ProductIllustration";
 
@@ -25,7 +27,11 @@ export const AdminPage: React.FC = () => {
     setActivePage, 
     apiAddProduct, 
     isStaticFrontendOnly,
-    mongodbStats
+    mongodbStats,
+    categories,
+    addCategory,
+    productStocks,
+    updateStock
   } = useShop();
 
   // Authentication states
@@ -46,9 +52,33 @@ export const AdminPage: React.FC = () => {
   const [notes, setNotes] = useState("");
   const [selectedIllustration, setSelectedIllustration] = useState("jasmine-pearls");
 
+  // Dynamic Category Creator form state
+  const [newCatLabel, setNewCatLabel] = useState("");
+  const [newCatId, setNewCatId] = useState("");
+  const [catSuccess, setCatSuccess] = useState(false);
+
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Auto generate Slug for dynamic categories
+  useEffect(() => {
+    const slug = newCatLabel
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)+/g, "");
+    setNewCatId(slug);
+  }, [newCatLabel]);
+
+  const handleAddCategorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatLabel.trim() || !newCatId.trim()) return;
+    addCategory(newCatId, newCatLabel.trim());
+    setCatSuccess(true);
+    setNewCatLabel("");
+    setTimeout(() => setCatSuccess(false), 3000);
+  };
 
   // Extended botanical illustration presets supported by <ProductIllustration />
   const ILLUSTRATION_PRESETS = [
@@ -338,7 +368,7 @@ export const AdminPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left panel: Product creation channel */}
-          <div className="col-span-12 lg:col-span-12">
+          <div className="col-span-12 lg:col-span-8">
             <div className="bg-white rounded-3xl border-4 border-black p-6 md:p-8 shadow-retro">
               <h2 className="font-serif italic font-black text-xl text-neutral-900 border-b border-neutral-150 pb-4 mb-6 flex items-center gap-2">
                 <span>➕ custom_blend_editor: insertOne()</span>
@@ -449,10 +479,9 @@ export const AdminPage: React.FC = () => {
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2.5 px-3 uppercase text-xs font-bold tracking-wider focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
                     >
-                      <option value="tea-sachets">🍃 tea-sachets</option>
-                      <option value="naked-sachets">📦 naked-sachets</option>
-                      <option value="latte-mix">🍵 latte-mix</option>
-                      <option value="gifts-samplers">🎁 gifts-samplers</option>
+                      {categories.filter(c => c.id !== "all").map(c => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -523,7 +552,72 @@ export const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom ledger block: Lists all currently created products */}
+          {/* Right panel: New dynamic 'CategoryFilter' component with live sync */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            <div className="bg-white rounded-3xl border-4 border-black p-6 shadow-retro">
+              <h2 className="font-serif italic font-black text-xl text-neutral-900 border-b border-neutral-150 pb-4 mb-6 flex flex-col">
+                <span>🌱 category_registry_manager</span>
+                <span className="text-[10px] font-mono bg-[#E0F3F5] text-[#00838F] uppercase py-1 px-2.5 rounded font-bold mt-1.5 self-start">Dynamic Filters</span>
+              </h2>
+
+              {catSuccess && (
+                <div className="bg-green-50 border-2 border-green-600 text-green-800 rounded-xl p-3 text-xs font-semibold mb-4 text-center">
+                  ✓ Category Filter Created Instantly!
+                </div>
+              )}
+
+              <form onSubmit={handleAddCategorySubmit} className="space-y-4">
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1 font-bold">
+                    category filter label
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 🍰 Sweet Pastries"
+                    value={newCatLabel}
+                    onChange={(e) => setNewCatLabel(e.target.value)}
+                    className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2.5 px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1 font-bold">
+                    slug router key (auto-generated)
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={newCatId}
+                    className="w-full bg-neutral-100 border-2 border-neutral-300 rounded-xl py-2.5 px-3.5 text-xs font-mono text-neutral-600"
+                  />
+                  <p className="text-[9px] text-neutral-400 mt-1 font-mono">Mapped dynamically into your storefront filter block.</p>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#1E2229] hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-widest py-3.5 rounded-xl border-2 border-black shadow-retro-sm transition-transform active:translate-y-0.5 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Register Category</span>
+                </button>
+              </form>
+
+              <div className="mt-8 pt-6 border-t border-dashed border-neutral-200">
+                <h3 className="text-[10px] font-mono font-bold tracking-wider text-neutral-400 uppercase mb-3">Active Store Categories</h3>
+                <div className="space-y-2 max-h-[190px] overflow-y-auto no-scrollbar">
+                  {categories.map((cat) => (
+                    <div key={cat.id} className="flex justify-between items-center bg-[#FAF9F5] border border-neutral-200 rounded-lg py-1.5 px-3 text-xs font-mono">
+                      <span className="font-semibold text-neutral-850 truncate max-w-[140px]">{cat.label}</span>
+                      <span className="text-[9px] bg-neutral-200 text-neutral-700 px-1.5 py-0.5 rounded uppercase font-bold text-[8px] truncate">{cat.id}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom ledger block: Lists all standard & custom products */}
           <div className="col-span-12">
             <div className="bg-white rounded-3xl border-4 border-black p-6 shadow-retro overflow-hidden">
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-neutral-150 pb-4 mb-6">
@@ -535,29 +629,37 @@ export const AdminPage: React.FC = () => {
                   <p className="text-[10px] text-neutral-500 font-mono mt-0.5">query: db.products.find({})</p>
                 </div>
                 <div className="text-[11px] font-mono text-neutral-500">
-                  Total Records Mapped: <strong className="text-neutral-950 font-sans">{customProducts.length} custom</strong>
+                  Total Records Mapped: <strong className="text-neutral-950 font-sans">{[...PRODUCTS, ...customProducts].length} active</strong> (Standard: {PRODUCTS.length}, Custom: {customProducts.length})
                 </div>
               </div>
 
-              {customProducts.length === 0 ? (
-                <div className="bg-[#FAF9F5] border-2 border-dashed border-neutral-200 rounded-2xl py-12 text-center text-xs text-neutral-500 font-mono">
-                  No custom tea documents present in the active collection. Apply the insertOne() form above to initialize one!
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse font-mono">
-                    <thead>
-                      <tr className="border-b-2 border-black text-neutral-500 uppercase tracking-wider text-[9px] bg-neutral-50">
-                        <th className="py-3 px-4">Box Preview</th>
-                        <th className="py-3 px-4 text-left">Document fields (Key-Values)</th>
-                        <th className="py-3 px-4">Category</th>
-                        <th className="py-3 px-4">Price</th>
-                        <th className="py-3 px-4 text-right">Database action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200">
-                      {customProducts.map((p) => (
-                        <tr key={p.id} className="hover:bg-[#FAF9F5]/50 transition-colors">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse font-mono">
+                  <thead>
+                    <tr className="border-b-2 border-black text-neutral-500 uppercase tracking-wider text-[9px] bg-neutral-50">
+                      <th className="py-3 px-4">Box Preview</th>
+                      <th className="py-3 px-4 text-left">Document fields (Key-Values)</th>
+                      <th className="py-3 px-4">Stock Level</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Price</th>
+                      <th className="py-3 px-4 text-right">Database action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200">
+                    {[...PRODUCTS, ...customProducts].map((p) => {
+                      const stockVal = productStocks[p.id] !== undefined ? productStocks[p.id] : 10;
+                      const isLowStock = stockVal < 5;
+                      const isCustom = p.id.startsWith("custom_") || !p.id.startsWith("prod-");
+
+                      return (
+                        <tr 
+                          key={p.id} 
+                          className={`transition-colors border-b ${
+                            isLowStock 
+                              ? "bg-amber-50/80 text-amber-950 border-l-4 border-l-amber-500 font-medium" 
+                              : "hover:bg-[#FAF9F5]/45"
+                          }`}
+                        >
                           <td className="py-4 px-4 whitespace-nowrap">
                             <div className="scale-50 -my-10 -mx-8">
                               <ProductIllustration type={p.image} badgeColor="bg-[#00838F]" />
@@ -569,13 +671,29 @@ export const AdminPage: React.FC = () => {
                               <p className="text-[10px] text-neutral-500 font-mono truncate leading-relaxed">
                                 id: <span className="text-[#00838F]">{p.id}</span> | label: "{p.badgeText}"
                               </p>
-                              <p className="text-[10px] text-stone-500 line-clamp-1 italic">
-                                notes: {p.notes}
-                              </p>
                             </div>
                           </td>
                           <td className="py-4 px-4 whitespace-nowrap">
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded bg-[#E0F2F1] text-[#006064] border border-[#00838F]/10">
+                            <div className="flex items-center gap-2">
+                              {isLowStock ? (
+                                <span className="text-red-700 font-sans text-sm font-black flex items-center gap-1">
+                                  ⚠️ {stockVal} Box{stockVal !== 1 ? "es" : ""} left
+                                </span>
+                              ) : (
+                                <span className="text-neutral-800 font-sans text-sm font-medium">
+                                  📦 {stockVal} Boxes
+                                </span>
+                              )}
+                              
+                              {isLowStock && (
+                                <span className="inline-flex text-[8px] font-black uppercase px-2 py-0.5 rounded bg-amber-200 text-amber-900 border border-amber-400 select-none animate-bounce-short">
+                                  LOW STOCK
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-1 rounded bg-[#E0F2F1] text-[#006064] border border-[#00838F]/10">
                               {p.category}
                             </span>
                           </td>
@@ -583,20 +701,54 @@ export const AdminPage: React.FC = () => {
                             ${(p.price || 0).toFixed(2)}
                           </td>
                           <td className="py-4 px-4 text-right whitespace-nowrap">
-                            <button
-                              onClick={() => handleDeleteCustomItem(p.id)}
-                              className="p-2 border-2 border-red-200 hover:border-red-500 hover:bg-red-50 rounded-xl text-red-600 transition-colors cursor-pointer"
-                              title="Delete Product Document"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-2.5">
+                              {isLowStock ? (
+                                <button
+                                  onClick={() => {
+                                    updateStock(p.id, 15);
+                                    alert(`Restocked ${p.name}! Added 15 boxes to virtual stock.`);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-neutral-950 font-sans text-xs font-black rounded-lg border border-neutral-900 shadow-retro-mini transition-transform active:translate-y-0.5 cursor-pointer tracking-tight"
+                                >
+                                  📦 Order More
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    updateStock(p.id, 10);
+                                  }}
+                                  className="px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-sans text-[10px] rounded border border-stone-300 transition-colors cursor-pointer"
+                                >
+                                  +10 Refill
+                                </button>
+                              )}
+                              
+                              <button
+                                onClick={() => {
+                                  if (!isCustom) {
+                                    alert("System template products cannot be destroyed.");
+                                    return;
+                                  }
+                                  handleDeleteCustomItem(p.id);
+                                }}
+                                disabled={!isCustom}
+                                className={`p-1.5 border-2 rounded-lg transition-colors cursor-pointer ${
+                                  isCustom 
+                                    ? "border-red-200 hover:border-red-500 hover:bg-red-50 text-red-600" 
+                                    : "border-neutral-200 text-neutral-350 cursor-not-allowed opacity-40 bg-neutral-50"
+                                }`}
+                                title={isCustom ? "Delete Product Document" : "System template (Read-Only)"}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 

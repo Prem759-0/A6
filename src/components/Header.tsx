@@ -4,19 +4,11 @@ import { ShoppingBag, Menu, X, ChevronDown, Award, Sparkles, BookOpen, User, Tru
 import { motion, AnimatePresence } from "motion/react";
 
 export const Header: React.FC = () => {
-  const { cart, setCartOpen, activeCategory, setActiveCategory, setTrackingOpen, activePage, setActivePage } = useShop();
+  const { cart, setCartOpen, activeCategory, setActiveCategory, setTrackingOpen, activePage, setActivePage, categories } = useShop();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dbState, setDbState] = useState<{ connected: boolean; count: number }>({ connected: false, count: 0 });
 
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
-
-  const categories = [
-    { id: "all", label: "Shop All" },
-    { id: "tea-sachets", label: "Tea Sachets" },
-    { id: "naked-sachets", label: "Naked Sachets" },
-    { id: "latte-mix", label: "Latte Mixes" },
-    { id: "gifts-samplers", label: "Gifts & Samplers" },
-  ];
 
   // Fetch quick DB status for the pulse live dot inside header
   useEffect(() => {

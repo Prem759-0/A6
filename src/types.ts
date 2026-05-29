@@ -12,6 +12,9 @@ export interface Product {
   description: string;
   image: string; // URL
   bgGradient: string; // Tailwind bg-gradient or custom color for product container
+  stock?: number;
+  ingredients?: string[];
+  brewingNotes?: string;
 }
 
 export interface Review {

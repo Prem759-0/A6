@@ -35,8 +35,52 @@ import {
   Facebook, 
   Linkedin,
   MapPin,
-  Check
+  Check,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
+
+const getProductDetails = (p: any) => {
+  // Prioritize custom data fields on custom products from state if they exist
+  if (p.ingredients && p.brewingNotes) {
+    return {
+      ingredients: Array.isArray(p.ingredients) ? p.ingredients : String(p.ingredients).split(",").map(i => i.trim()),
+      brewingNotes: p.brewingNotes
+    };
+  }
+  
+  const name = p.name.toLowerCase();
+  let ingredients = ["Premium organic whole leaf tea sourced in high-altitude boutique farms"];
+  let brewingNotes = "Steep 1 sachet in 12 oz of 200°F water for 4-5 minutes.";
+
+  if (name.includes("green") || name.includes("jasmine")) {
+    ingredients = ["Organic whole-leaf Green Tea", "Fresh Jasmine blossoms", "Organic pineapple chunks", "Jasmine leaf extract"];
+    brewingNotes = "Water temperature around 175°F. Steep for 2 to 3 minutes.";
+  } else if (name.includes("peppermint")) {
+    ingredients = ["100% Pure Organic Washington State Peppermint leaves"];
+    brewingNotes = "Water at 208°F. Steep for 5 to 6 minutes for full aromatic density.";
+  } else if (name.includes("chamomile")) {
+    ingredients = ["100% Organic Egyptian Chamomile flower heads", "Soothing European lavender buds"];
+    brewingNotes = "Boiling water (208°F). Steep for 5 to 7 minutes before drinking.";
+  } else if (name.includes("matcha")) {
+    ingredients = ["Direct-import ceremonial grade stone-ground Japanese Uji Matcha powder", "L-Theanine amino acid extract", "Subtle traces of cane fiber"];
+    brewingNotes = "Whisk 1 tsp with 2 oz warm 175°F water, then pour hot milk or iced water.";
+  } else if (name.includes("chai")) {
+    ingredients = ["Organic robust black tea leaves", "Crushed cardamom pods", "Cinnamon twigs", "Cloves", "Ginger slice", "Sweet spice essence"];
+    brewingNotes = "Step with hot frothed milk or water at boiling temperature for 5 minutes.";
+  } else if (name.includes("earl grey") || name.includes("black")) {
+    ingredients = ["Organic premium Indian black tea", "Organic fresh Italian Bergamot essential oil", "Delicate blue cornflower blossoms"];
+    brewingNotes = "Water at 200°F. Steep for 4 to 5 minutes.";
+  } else if (name.includes("hibiscus") || name.includes("berry") || name.includes("trio")) {
+    ingredients = ["Organic hibiscus petals", "Siberian elderberries", "Dried elderberries", "Apple bits", "Cranberry skin", "Orange zest"];
+    brewingNotes = "Boiling water (208°F). Steep for 6-8 minutes. Exceptional iced or warm.";
+  } else if (name.includes("bamboo")) {
+    ingredients = ["A custom sampler of premium dark, golden, and herbal green teas"];
+    brewingNotes = "Water temps vary. Consult custom cards inside the chest.";
+  }
+  
+  return { ingredients, brewingNotes };
+};
 
 function MainAppContent() {
   const { 
@@ -51,12 +95,14 @@ function MainAppContent() {
     activePage,
     setActivePage,
     setTrackingOpen,
-    setSelectedProduct
+    setSelectedProduct,
+    categories
   } = useShop();
 
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [viewStyle, setViewStyle] = useState<"carousel" | "grid">("grid");
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
 
   // Hero Interactive Tea Brewer local state
   const [brewTea, setBrewTea] = useState<"alpine" | "matcha" | "grey" | "mint">("alpine");
@@ -158,14 +204,6 @@ function MainAppContent() {
       setNewsletterEmail("");
     }
   };
-
-  const categories = [
-    { id: "all", label: "🔥 All Best Sellers" },
-    { id: "tea-sachets", label: "🍃 Tea Sachets" },
-    { id: "naked-sachets", label: "📦 Naked Sachets" },
-    { id: "latte-mix", label: "🍵 Latte Mixes" },
-    { id: "gifts-samplers", label: "🎁 Gifts & Samplers" },
-  ];
 
   return (
     <div className="min-h-screen bg-[#FAF9F5] text-[#1E2229] font-sans overflow-x-hidden selection:bg-[#00838F] selection:text-white">
@@ -703,6 +741,49 @@ function MainAppContent() {
                         <p className="text-xs text-neutral-500 font-sans font-light mt-1.5 line-clamp-2">
                           {p.description}
                         </p>
+
+                        {/* Inline Expandable Details section */}
+                        <div className="mt-3 border-t border-dashed border-neutral-200 pt-2.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedProducts(prev => ({
+                                ...prev,
+                                [p.id]: !prev[p.id]
+                              }));
+                            }}
+                            className="flex items-center justify-between w-full text-[10px] font-mono font-black uppercase tracking-wider text-[#00838F] hover:text-[#00ACC1] transition-colors py-1 cursor-pointer select-none"
+                          >
+                            <span>{expandedProducts[p.id] ? "🌱 Hide ingredients" : "🌱 Ingredients & brewing"}</span>
+                            {expandedProducts[p.id] ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          
+                          {expandedProducts[p.id] && (
+                            <div className="mt-2 bg-[#FAF9F5] rounded-xl border border-neutral-200 p-2.5 space-y-2 text-left">
+                              <div>
+                                <p className="text-[8px] font-mono uppercase font-black tracking-widest text-neutral-450 leading-none mb-1 text-stone-500">Components</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {getProductDetails(p).ingredients.map((ing, idx) => (
+                                    <span key={idx} className="text-[8px] font-sans font-medium text-stone-700 bg-white border border-stone-200 px-1 py-0.5 rounded leading-none">
+                                      {ing}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <p className="text-[8px] font-mono uppercase font-black tracking-widest text-neutral-450 leading-none mb-0.5 text-stone-500">Brew Guide</p>
+                                <p className="text-[9px] text-stone-600 font-sans leading-relaxed">
+                                  ⏱️ {getProductDetails(p).brewingNotes}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       {/* Price statement bottom bar wrapper */}

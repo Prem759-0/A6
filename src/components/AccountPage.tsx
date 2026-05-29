@@ -2,6 +2,15 @@ import React, { useState } from "react";
 import { useShop } from "../context/ShopContext";
 import { motion } from "motion/react";
 import { User, Lock, Mail, ShoppingBag, ArrowLeft, LogOut, CheckCircle2, Clock, Calendar, MapPin, Sparkles, Truck } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from "recharts";
 
 const getStepDateStr = (baseDateStr: string, minutesToAdd: number) => {
   try {
@@ -32,6 +41,41 @@ export const AccountPage: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedTrackOrder, setSelectedTrackOrder] = useState<any | null>(null);
+
+  // Generate last 6 months of user spending data
+  const getSpendingChartData = () => {
+    const months = [];
+    const now = new Date();
+    
+    // Build list of last 6 months in correct chronological order
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const name = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      months.push({
+        name,
+        total: 0,
+        ordersCount: 0,
+        monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      });
+    }
+
+    // Accumulate total spend from dynamic orders matching each month
+    orders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      if (isNaN(orderDate.getTime())) return;
+      const orderYear = orderDate.getFullYear();
+      const orderMonth = orderDate.getMonth() + 1;
+      const orderMonthKey = `${orderYear}-${String(orderMonth).padStart(2, '0')}`;
+
+      const matchedMonth = months.find(m => m.monthKey === orderMonthKey);
+      if (matchedMonth) {
+        matchedMonth.total += Number(order.total || 0);
+        matchedMonth.ordersCount += 1;
+      }
+    });
+
+    return months;
+  };
 
   // Authentication Submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,6 +171,77 @@ export const AccountPage: React.FC = () => {
 
             {/* Account Dashboard Content Options */}
             <div>
+              {/* Dynamic 6-Month Spending History Chart via Recharts */}
+              <div className="mb-10 bg-[#FAF9F5] border-2 border-black rounded-3xl p-6 shadow-retro-small">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-dashed border-neutral-300 pb-4 mb-5">
+                  <div>
+                    <h3 className="text-[10px] font-mono font-black uppercase tracking-widest text-[#00838F] flex items-center gap-1.5 leading-none">
+                      <span>📊 database_insights: aggregateSpend()</span>
+                      <span className="text-[8px] bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">LIVE TELEMETRY</span>
+                    </h3>
+                    <h4 className="font-serif italic font-black text-lg text-neutral-900 mt-1.5 leading-tight">
+                      Your 6-Month Rolling Spending Ledger
+                    </h4>
+                  </div>
+                  
+                  <div className="bg-white border-2 border-black rounded-2xl py-2 px-4 shadow-retro-mini flex flex-col">
+                    <span className="text-[8px] font-mono font-bold tracking-widest text-neutral-400 uppercase leading-none">Total Aggregate Spend</span>
+                    <strong className="text-neutral-950 font-sans font-black text-lg mt-0.5 leading-none">
+                      ${getSpendingChartData().reduce((acc, m) => acc + m.total, 0).toFixed(2)}
+                    </strong>
+                  </div>
+                </div>
+
+                {getSpendingChartData().reduce((acc, m) => acc + m.total, 0) === 0 ? (
+                  <div className="bg-white border-2 border-dashed border-neutral-200 rounded-2xl py-8 px-4 text-center font-mono text-neutral-500 text-xs">
+                    <p className="font-sans font-bold text-neutral-700">No transaction telemetry detected on this profile yet.</p>
+                    <p className="text-[10px] text-neutral-400 mt-1">Submit high-fidelity simulated checkout orders to draw dynamic spending curves instantly!</p>
+                  </div>
+                ) : (
+                  <div className="h-52 w-full select-none" style={{ minWidth: "150px" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={getSpendingChartData()} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E4DE" />
+                        <XAxis 
+                          dataKey="name" 
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fill: "#6E6D64", fontSize: 9, fontFamily: "monospace" }}
+                        />
+                        <YAxis 
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(val) => `$${val}`}
+                          tick={{ fill: "#6E6D64", fontSize: 9, fontFamily: "monospace" }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: "#1E2229", 
+                            borderColor: "#000",
+                            borderWidth: "1px",
+                            borderRadius: "12px", 
+                            color: "#fff", 
+                            fontFamily: "monospace", 
+                            fontSize: "11px",
+                            boxShadow: "4px 4px 0px rgba(0,0,0,1)"
+                          }}
+                          formatter={(value: any) => [`$${Number(value).toFixed(2)}`, "Monthly Spend"]}
+                          labelFormatter={(label) => `Billing Epoch: ${label}`}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="total" 
+                          stroke="#00838F" 
+                          strokeWidth={3} 
+                          dot={{ r: 4, strokeWidth: 2, stroke: "#00ACC1", fill: "#fff" }}
+                          activeDot={{ r: 6, stroke: "#00838F", strokeWidth: 2 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-neutral-200 pb-4">
                 <h3 className="font-serif font-black text-xl text-neutral-950 flex items-center gap-2">
                   <ShoppingBag className="w-5 h-5 text-[#00838F]" />

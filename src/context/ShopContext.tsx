@@ -42,6 +42,12 @@ interface ShopContextType {
   resetTimer: () => void;
   setTimerSecondsLeft: React.Dispatch<React.SetStateAction<number>>;
   
+  // Custom categories & dynamic stock level controls
+  categories: { id: string; label: string }[];
+  addCategory: (id: string, label: string) => void;
+  productStocks: Record<string, number>;
+  updateStock: (productId: string, delta: number) => void;
+
   // MongoDB Full-stack session details
   user: { name: string; email: string } | null;
   setUser: (user: { name: string; email: string } | null) => void;
@@ -78,6 +84,77 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activePage, setActivePage] = useState("store");
 
   const [isTrackingOpen, setTrackingOpen] = useState(false);
+
+  // Custom Categories state with LocalStorage buffer representation
+  const [categories, setCategories] = useState<{ id: string; label: string }[]>(() => {
+    try {
+      const saved = localStorage.getItem("tea_custom_categories");
+      const customs = saved ? JSON.parse(saved) : [];
+      return [
+        { id: "all", label: "🔥 All Best Sellers" },
+        { id: "tea-sachets", label: "🍃 Tea Sachets" },
+        {"id": "naked-sachets", "label": "📦 Naked Sachets"},
+        {"id": "latte-mix", "label": "🍵 Latte Mixes"},
+        {"id": "gifts-samplers", "label": "🎁 Gifts & Samplers"},
+        ...customs
+      ];
+    } catch {
+      return [
+        { id: "all", label: "🔥 All Best Sellers" },
+        { id: "tea-sachets", label: "🍃 Tea Sachets" },
+        { id: "naked-sachets", label: "📦 Naked Sachets" },
+        { id: "latte-mix", label: "🍵 Latte Mixes" },
+        { id: "gifts-samplers", label: "🎁 Gifts & Samplers" },
+      ];
+    }
+  });
+
+  const addCategory = (id: string, label: string) => {
+    setCategories((prev) => {
+      if (prev.some(cat => cat.id === id)) return prev;
+      const newCat = { id, label };
+      const updated = [...prev, newCat];
+      const customOnly = updated.filter(cat => !["all", "tea-sachets", "naked-sachets", "latte-mix", "gifts-samplers"].includes(cat.id));
+      localStorage.setItem("tea_custom_categories", JSON.stringify(customOnly));
+      return updated;
+    });
+  };
+
+  // Stock system mapping initialized with custom static data
+  const [productStocks, setProductStocks] = useState<Record<string, number>>(() => {
+    try {
+      const saved = localStorage.getItem("tea_product_stocks");
+      if (saved) return JSON.parse(saved);
+      return {
+        "prod-1": 15,
+        "prod-2": 3,
+        "prod-3": 24,
+        "prod-4": 2,
+        "prod-5": 11,
+        "prod-6": 8,
+        "prod-7": 4,
+        "prod-8": 19,
+        "prod-9": 30,
+        "prod-10": 1,
+        "prod-11": 12,
+        "prod-12": 16,
+        "prod-13": 2,
+        "prod-14": 15,
+        "prod-15": 7
+      };
+    } catch {
+      return {};
+    }
+  });
+
+  const updateStock = (productId: string, delta: number) => {
+    setProductStocks((prev) => {
+      const current = prev[productId] !== undefined ? prev[productId] : 10;
+      const updated = { ...prev, [productId]: Math.max(0, current + delta) };
+      localStorage.setItem("tea_product_stocks", JSON.stringify(updated));
+      return updated;
+    });
+  };
   
   // Full-stack states linked to MongoDB
   const [user, setUser] = useState<{ name: string; email: string } | null>(() => {
@@ -327,6 +404,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const apiPlaceOrder = async (orderPayload: { userEmail: string; items: any[]; total: number; address: string }) => {
+    // Deplete stocks dynamically upon placing order
+    try {
+      orderPayload.items.forEach(item => {
+        updateStock(item.id, -Number(item.quantity || 1));
+      });
+    } catch (err) {
+      console.warn("Warning depleting stock on checkout:", err);
+    }
+
     if (isStaticFrontendOnly) {
       const ordersStr = localStorage.getItem("tea_simulated_orders");
       const ordersList = ordersStr ? JSON.parse(ordersStr) : [];
@@ -590,7 +676,13 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetTimer,
         setTimerSecondsLeft,
         
-        // Full-stack fields
+        // Custom Categories & Stock levels system
+        categories,
+        addCategory,
+        productStocks,
+        updateStock,
+        
+        // MongoDB Full-stack fields
         user,
         setUser,
         customProducts,
