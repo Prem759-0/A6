@@ -102,14 +102,9 @@ function MainAppContent() {
     editedProducts
   } = useShop();
 
-  const allAvailableProducts = [...PRODUCTS, ...customProducts]
-    .filter((p) => !deletedProductIds.includes(p.id))
-    .map((p) => {
-      const ed = editedProducts[p.id];
-      return ed ? { ...p, ...ed } : p;
-    });
-
-  const activeShowcaseProduct = allAvailableProducts.find(p => p.id === heroFeaturedProductId) || allAvailableProducts[0];
+  // New states for the custom product showcased inside the banner container
+  const [heroActiveTab, setHeroActiveTab] = useState<"brew" | "featured">("brew");
+  const [heroFeaturedProductId, setHeroFeaturedProductId] = useState<string>("prod-1");
 
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
@@ -121,9 +116,14 @@ function MainAppContent() {
   const [isHeroSteeping, setIsHeroSteeping] = useState(false);
   const [heroTimer, setHeroTimer] = useState(0);
 
-  // New states for the custom product showcased inside the banner container
-  const [heroActiveTab, setHeroActiveTab] = useState<"brew" | "featured">("brew");
-  const [heroFeaturedProductId, setHeroFeaturedProductId] = useState<string>("prod-1");
+  const allAvailableProducts = [...PRODUCTS, ...customProducts]
+    .filter((p) => !deletedProductIds.includes(p.id))
+    .map((p) => {
+      const ed = editedProducts[p.id];
+      return ed ? { ...p, ...ed } : p;
+    });
+
+  const activeShowcaseProduct = allAvailableProducts.find(p => p.id === heroFeaturedProductId) || allAvailableProducts[0];
 
   // Hero Steeping Timer countdown tick
   React.useEffect(() => {
