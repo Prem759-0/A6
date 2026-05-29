@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Award, Calculator, Clipboard, Mail, ShieldCheck, Star } from "lucide-react";
+import { Award, Calculator, Clipboard, Mail, ShieldCheck, Star, Check, AlertCircle } from "lucide-react";
 
 export const WholesalePage: React.FC = () => {
   const [teaType, setTeaType] = useState<"compostable" | "naked" | "barista">("compostable");
@@ -11,6 +11,13 @@ export const WholesalePage: React.FC = () => {
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
+
+  const [businessTouched, setBusinessTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  // Validation rules
+  const isBusinessValid = businessName.trim().length >= 3;
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const pricingMap = {
     compostable: { unitPrice: 0.45, name: "Pyramid Compostable Sachets (Cases of 100)" },
@@ -32,7 +39,9 @@ export const WholesalePage: React.FC = () => {
 
   const handleQuoteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (businessName && email) {
+    setBusinessTouched(true);
+    setEmailTouched(true);
+    if (isBusinessValid && isEmailValid) {
       setFormSubmitted(true);
     }
   };
@@ -230,27 +239,99 @@ export const WholesalePage: React.FC = () => {
                 </p>
 
                 <div className="space-y-1.5 pt-2">
-                  <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest block">Business / Coffee Shop Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="e.g., Summit Coffee Roasters CO"
-                    className="w-full bg-[#FAF9F5] border border-black/15 rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:border-[#00838F]"
-                  />
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest block">Business / Coffee Shop Name</label>
+                    {businessTouched && (
+                      <span className="text-[9px] font-bold flex items-center gap-1">
+                        {isBusinessValid ? (
+                          <span className="text-emerald-600 flex items-center gap-0.5">
+                            <Check className="w-3 h-3" /> Valid
+                          </span>
+                        ) : (
+                          <span className="text-rose-500 flex items-center gap-0.5">
+                            <AlertCircle className="w-3 h-3" /> At least 3 chars
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={businessName}
+                      onChange={(e) => {
+                        setBusinessName(e.target.value);
+                        setBusinessTouched(true);
+                      }}
+                      onBlur={() => setBusinessTouched(true)}
+                      placeholder="e.g., Summit Coffee Roasters CO"
+                      className={`w-full bg-[#FAF9F5] border rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none transition-all ${
+                        !businessTouched
+                          ? "border-black/15 focus:border-[#00838F] focus:ring-1 focus:ring-[#00838F]"
+                          : isBusinessValid
+                          ? "border-emerald-500 focus:border-emerald-500 bg-emerald-50/10 focus:ring-1 focus:ring-emerald-500"
+                          : "border-rose-400 focus:border-rose-500 bg-rose-50/10 focus:ring-1 focus:ring-rose-500"
+                      }`}
+                    />
+                    {businessTouched && (
+                      <div className="absolute right-3.5 top-3 pointer-events-none">
+                        {isBusinessValid ? (
+                          <Check className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-rose-500 animate-pulse" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest block">Corporate Contact Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@business.com"
-                    className="w-full bg-[#FAF9F5] border border-black/15 rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:border-[#00838F]"
-                  />
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase text-neutral-500 tracking-widest block">Corporate Contact Email</label>
+                    {emailTouched && (
+                      <span className="text-[9px] font-bold flex items-center gap-1">
+                        {isEmailValid ? (
+                          <span className="text-emerald-600 flex items-center gap-0.5">
+                            <Check className="w-3 h-3" /> Valid Email
+                          </span>
+                        ) : (
+                          <span className="text-rose-500 flex items-center gap-0.5">
+                            <AlertCircle className="w-3 h-3" /> Invalid format
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setEmailTouched(true);
+                      }}
+                      onBlur={() => setEmailTouched(true)}
+                      placeholder="name@business.com"
+                      className={`w-full bg-[#FAF9F5] border rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none transition-all ${
+                        !emailTouched
+                          ? "border-black/15 focus:border-[#00838F] focus:ring-1 focus:ring-[#00838F]"
+                          : isEmailValid
+                          ? "border-emerald-500 focus:border-emerald-500 bg-emerald-50/10 focus:ring-1 focus:ring-emerald-500"
+                          : "border-rose-400 focus:border-rose-500 bg-rose-50/10 focus:ring-1 focus:ring-rose-500"
+                      }`}
+                    />
+                    {emailTouched && (
+                      <div className="absolute right-3.5 top-3 pointer-events-none">
+                        {isEmailValid ? (
+                          <Check className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-rose-500 animate-pulse" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">

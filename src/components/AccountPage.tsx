@@ -1,7 +1,25 @@
 import React, { useState } from "react";
 import { useShop } from "../context/ShopContext";
 import { motion } from "motion/react";
-import { User, Lock, Mail, ShoppingBag, ArrowLeft, LogOut, CheckCircle2, Clock, Calendar, MapPin, Sparkles } from "lucide-react";
+import { User, Lock, Mail, ShoppingBag, ArrowLeft, LogOut, CheckCircle2, Clock, Calendar, MapPin, Sparkles, Truck } from "lucide-react";
+
+const getStepDateStr = (baseDateStr: string, minutesToAdd: number) => {
+  try {
+    const d = new Date(baseDateStr);
+    if (isNaN(d.getTime())) return null;
+    d.setMinutes(d.getMinutes() + minutesToAdd);
+    return d.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric"
+    }) + " • " + d.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    });
+  } catch (e) {
+    return null;
+  }
+};
 
 export const AccountPage: React.FC = () => {
   const { user, setUser, orders, fetchOrders, setActivePage, clearCart, apiLogin, apiRegister, isStaticFrontendOnly } = useShop();
@@ -13,6 +31,7 @@ export const AccountPage: React.FC = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedTrackOrder, setSelectedTrackOrder] = useState<any | null>(null);
 
   // Authentication Submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,10 +127,123 @@ export const AccountPage: React.FC = () => {
 
             {/* Account Dashboard Content Options */}
             <div>
-              <h3 className="font-serif font-black text-xl text-neutral-950 flex items-center gap-2 mb-6">
-                <ShoppingBag className="w-5 h-5 text-[#00838F]" />
-                Your MongoDB Order History
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-neutral-200 pb-4">
+                <h3 className="font-serif font-black text-xl text-neutral-950 flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-[#00838F]" />
+                  Your MongoDB Order History
+                </h3>
+                {orders.length > 0 && (
+                  <span className="text-[11px] font-mono text-neutral-500">
+                    Showing <strong className="text-[#00838F]">{orders.length}</strong> dynamic order documents mapped
+                  </span>
+                )}
+              </div>
+
+              {/* INTEGRACTIVE LIVE LOGISTICS JOURNEY TRACKER */}
+              {selectedTrackOrder && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-8 p-6 bg-gradient-to-br from-[#E0F2F1] via-white to-stone-50 border-4 border-[#00838F] rounded-3xl shadow-retro-small relative overflow-hidden text-neutral-800"
+                >
+                  <div className="absolute top-0 right-0 w-36 h-36 bg-[#00838F]/5 rounded-full blur-2xl pointer-events-none" />
+                  
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <div>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[#004D40] bg-[#B2DFDB] px-3 py-1.5 rounded-md border border-[#00838F]/20">
+                        🚚 staging active route tracking
+                      </span>
+                      <h4 className="text-xl font-black font-serif italic text-neutral-900 mt-2">
+                        Logistics Timeline for Order #{selectedTrackOrder.id}
+                      </h4>
+                      <p className="text-[10px] text-neutral-500 font-mono mt-0.5">
+                        Interactive journey log synced with simulated MongoDB collection
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedTrackOrder(null)}
+                      className="text-[10px] bg-neutral-900 text-white hover:bg-neutral-800 px-4 py-2 rounded-xl font-bold uppercase cursor-pointer border border-black shadow-retro-mini transition-transform active:translate-y-0.5"
+                    >
+                      Close Map
+                    </button>
+                  </div>
+
+                  {/* Horizontal Timeline flow */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-4 py-4 relative">
+                    {/* Background connector line */}
+                    <div className="hidden md:block absolute top-[22px] left-[10%] right-[10%] h-1 bg-gradient-to-r from-[#00838F] via-[#A2C97A] to-neutral-200 z-0 rounded-full" />
+                    
+                    {[
+                      { 
+                        title: "Order Placed", 
+                        desc: "Document generated in users.orders collection", 
+                        offset: 0, 
+                        isTerminalStatus: true 
+                      },
+                      { 
+                        title: "Leaves Farmed & Plucked", 
+                        desc: "Artisanal high-altitude whole tea leaf harvesting", 
+                        offset: 45, 
+                        isTerminalStatus: true 
+                      },
+                      { 
+                        title: "Freshness Sealing Completed", 
+                        desc: "Biodegradable sachet packaging and quality test passed", 
+                        offset: 120, 
+                        isTerminalStatus: true 
+                      },
+                      { 
+                        title: "In Transit to Transit Center", 
+                        desc: "Dispatched to regional sorting center", 
+                        offset: 360, 
+                        isTerminalStatus: selectedTrackOrder.status === "delivered" || selectedTrackOrder.status === "transit" 
+                      },
+                      { 
+                        title: "Arrived & Brewed", 
+                        desc: "Delivered cleanly to recipient's mailbox", 
+                        offset: 720, 
+                        isTerminalStatus: selectedTrackOrder.status === "delivered" 
+                      }
+                    ].map((step, idx) => {
+                      const isCompleted = step.isTerminalStatus;
+                      const isCurrentActive = !step.isTerminalStatus && idx === (selectedTrackOrder.status === "delivered" ? 4 : 3);
+                      
+                      const orderTime = selectedTrackOrder.createdAt;
+                      const stepTimeFormatted = getStepDateStr(orderTime, step.offset);
+
+                      return (
+                        <div key={idx} className="flex md:flex-col items-start md:items-center text-left md:text-center gap-4 md:gap-3.5 relative z-10">
+                          {/* Animated state bubble */}
+                          <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 border-2 transition-all duration-300 font-bold ${
+                            isCompleted 
+                              ? "bg-[#00838F] border-black text-white text-sm shadow-md" 
+                              : isCurrentActive 
+                              ? "bg-amber-150 border-[#00838F] text-[#00838F] text-xs animate-pulse ring-4 ring-[#00ACC1]/20" 
+                              : "bg-[#FAF9F5] border-neutral-300 text-neutral-400 text-xs"
+                          }`}>
+                            {isCompleted ? "✓" : idx + 1}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-neutral-900 tracking-tight leading-tight md:mt-1">{step.title}</p>
+                            
+                            {/* VISUALLY ENHANCED TIMESTAMP */}
+                            <p className="text-[9px] font-mono font-extrabold text-[#00838F] bg-[#E0F2F1]/60 px-1.5 py-0.5 rounded inline-block mt-1">
+                              {isCompleted ? (stepTimeFormatted || "Completed") : idx < 3 ? "Process complete" : "Pending execution..."}
+                            </p>
+
+                            <p className="text-[10px] text-neutral-500 leading-normal mt-1 max-w-[150px] md:mx-auto">{step.desc}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-8 pt-4 border-t border-dashed border-neutral-200 text-[11px] font-mono text-neutral-500 flex flex-col md:flex-row justify-between gap-4">
+                    <span>⚡ Est. Arrival: <strong className="text-neutral-950 font-sans font-black">1-2 Business Days</strong></span>
+                    <span>📍 Destination Address: <strong className="text-neutral-950 font-sans font-black">{selectedTrackOrder.address}</strong></span>
+                  </div>
+                </motion.div>
+              )}
 
               {orders.length === 0 ? (
                 <div className="bg-[#FAF9F5] border-2 border-dashed border-neutral-300 rounded-2xl p-8 text-center">
@@ -129,7 +261,11 @@ export const AccountPage: React.FC = () => {
                   {orders.map((order) => (
                     <div 
                       key={order.id}
-                      className="border-2 border-black rounded-2xl p-5 md:p-6 bg-neutral-50 hover:bg-white transition-all shadow-retro-small"
+                      className={`border-2 rounded-2xl p-5 md:p-6 transition-all shadow-retro-small duration-350 ${
+                        selectedTrackOrder?.id === order.id 
+                          ? "border-[#00838F] bg-teal-50/10 shadow-lg" 
+                          : "border-black bg-neutral-50 hover:bg-white"
+                      }`}
                     >
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-4 mb-4 border-neutral-200">
                         <div className="flex flex-wrap items-center gap-3">
@@ -189,18 +325,36 @@ export const AccountPage: React.FC = () => {
                       </div>
 
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6 pt-4 border-t border-dashed border-neutral-200 text-sm">
-                        <div className="flex items-start gap-1.5 text-[#1E2229]">
+                        <div className="flex items-start gap-1.5 text-[#1E2229] flex-1">
                           <MapPin className="w-4 h-4 text-neutral-400 mt-0.5" />
                           <div className="text-xs text-neutral-500 max-w-sm">
                             <span className="font-bold text-neutral-600">Shipped To: </span>
                             {order.address}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xs text-neutral-500 block">Total Checked Out</span>
-                          <span className="text-lg font-black text-neutral-900 font-serif">
-                            ${order.total.toFixed(2)}
-                          </span>
+                        
+                        <div className="flex flex-wrap items-center gap-4 justify-between sm:justify-end w-full sm:w-auto">
+                          <button
+                            onClick={() => {
+                              setSelectedTrackOrder(order);
+                              window.scrollTo({ top: 180, behavior: "smooth" });
+                            }}
+                            className={`px-3 py-1.5 rounded-lg border-2 border-black text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all active:translate-y-0.5 ${
+                              selectedTrackOrder?.id === order.id
+                                ? "bg-[#00838F] text-white"
+                                : "bg-white text-neutral-800 hover:bg-[#FAF9F5] shadow-retro-mini"
+                            }`}
+                          >
+                            <Truck className="w-3.5 h-3.5" />
+                            <span>{selectedTrackOrder?.id === order.id ? "Tracking Active" : "Track Journey"}</span>
+                          </button>
+                          
+                          <div className="text-right">
+                            <span className="text-[10px] text-neutral-500 block uppercase font-mono">Invoice Total</span>
+                            <span className="text-base font-black text-[#1E2229] font-serif block">
+                              ${order.total.toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>

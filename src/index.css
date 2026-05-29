@@ -66,4 +66,13 @@
   transform: scale(1.06);
 }
 
+/* Hide scrollbar for clean custom list sliding containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
 

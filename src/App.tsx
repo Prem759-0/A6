@@ -111,8 +111,35 @@ function MainAppContent() {
     };
   }, [isHeroSteeping, heroTimer]);
 
-  // References for horizontal scrolling of products
+  // References for horizontal scrolling of products with touch-drag and swipe support
   const productScrollRef = useRef<HTMLDivElement>(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const swipeStartX = useRef(0);
+  const swipeScrollLeft = useRef(0);
+
+  const handleSwipeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (viewStyle !== "carousel" || !productScrollRef.current) return;
+    setIsSwiping(true);
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    swipeStartX.current = clientX - productScrollRef.current.offsetLeft;
+    swipeScrollLeft.current = productScrollRef.current.scrollLeft;
+  };
+
+  const handleSwipeMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isSwiping || viewStyle !== "carousel" || !productScrollRef.current) return;
+    if (!("touches" in e)) {
+      e.preventDefault();
+    }
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const x = clientX - productScrollRef.current.offsetLeft;
+    const walkMultiplier = 1.6;
+    const walk = (x - swipeStartX.current) * walkMultiplier;
+    productScrollRef.current.scrollLeft = swipeScrollLeft.current - walk;
+  };
+
+  const handleSwipeEnd = () => {
+    setIsSwiping(false);
+  };
 
   const scrollProducts = (direction: "left" | "right") => {
     if (productScrollRef.current) {
@@ -161,38 +188,39 @@ function MainAppContent() {
         <MongodbDashboard />
       ) : (
         <>
-          {/* SECTION 1: HERO CONTAINER SETUP */}
-          <section className="relative bg-[#1E2922] bg-[radial-gradient(ellipse_at_top_right,rgba(93,139,44,0.18),transparent)] text-stone-100 py-12 px-4 md:py-20 md:px-8 border-b-2 border-stone-800 overflow-hidden select-none">
+          {/* SECTION 1: REDESIGNED HERO COMPANION BANNER */}
+          <section className="relative bg-gradient-to-br from-[#0B120E] via-[#15241C] to-[#080D0A] text-stone-100 py-16 px-6 md:py-28 md:px-12 border-b-4 border-black overflow-hidden select-none">
         
-        {/* Organic floating particle overlays mimicking mountain morning tea mist */}
-        <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.08),transparent_50%)]"></div>
-        <div className="absolute top-20 left-1/4 w-40 h-40 bg-emerald-700/10 rounded-full blur-3xl pointer-events-none"></div>
+        {/* Dynamic visual organic lighting and tea mist circles */}
+        <div className="absolute inset-0 opacity-40 mix-blend-[color-dodge] pointer-events-none bg-[radial-gradient(circle_at_70%_20%,rgba(162,201,122,0.15),transparent_60%)]"></div>
+        <div className="absolute top-24 left-1/3 w-64 h-64 bg-[#5D8B2C]/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-8 md:gap-16 items-center relative z-10">
           
           {/* Hero left-hand text banner content */}
-          <div className="col-span-12 md:col-span-6 space-y-6 text-center md:text-left">
-            <div className="inline-flex items-center gap-2 bg-[#5D8B2C]/20 border border-[#5D8B2C]/40 px-3 py-1 rounded-full text-[10px] font-mono tracking-widest text-[#9CCC65] uppercase">
-              <span>🌾 100% Plant-Based Biodegradable</span>
+          <div className="col-span-12 md:col-span-6 space-y-7 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 bg-[#5D8B2C]/15 border border-[#5D8B2C]/35 px-4 py-1.5 rounded-full text-[10px] font-mono tracking-widest text-[#A2C97A] uppercase">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A2C97A] animate-ping" />
+              <span>🌱 100% Biodegradable Plant Sachets</span>
             </div>
 
-            <h1 className="font-serif italic font-extrabold text-4.5xl md:text-6.5xl tracking-tight leading-tight text-[#FAF9F5]">
-              A cup that fits <br className="hidden md:block" /> the moment.
+            <h1 className="font-serif italic font-black text-4.5xl md:text-6.5xl tracking-tight leading-[1.1] text-white">
+              A cup that fits <br className="hidden md:block" /> the <span className="text-[#A2C97A] font-light">quietest</span> moment.
             </h1>
             
             <p className="text-xs md:text-sm text-stone-300 font-light max-w-lg leading-relaxed">
-              From organic compostable plant-based whole leaf tea sachets and iced tea to sweet rich tea lattes and Japanese Uji matcha, we've got something special for everyone. Crafted for slow living, plucked in alignment with old-world agriculture.
+              Experience whole-leaf organic tea sachets and artisanal matcha crafted for slow living. Plucked in alignment with centuries-old agricultural cycles, each cup reveals the purest story of mountain moisture, rich crop soil, and tranquil devotion.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
+            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start pt-2">
               <button
                 onClick={() => {
                   const el = document.getElementById("best-sellers-section");
                   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="w-full sm:w-auto bg-[#5D8B2C] hover:bg-[#4E7525] text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-xl shadow-md transition-all hover:-translate-y-0.5"
+                className="w-full sm:w-auto bg-[#5D8B2C] hover:bg-[#6FA434] text-white font-bold text-xs uppercase tracking-widest px-8 py-4.5 rounded-xl transition-all hover:-translate-y-0.5 shadow-lg shadow-[#5D8B2C]/10 hover:shadow-[#5D8B2C]/20 border border-neutral-900/40 cursor-pointer"
               >
-                Shop Our Teas
+                Shop Heritage Blends
               </button>
               
               <button 
@@ -200,10 +228,10 @@ function MainAppContent() {
                   setActivePage("origins");
                   window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                className="text-xs font-bold uppercase tracking-widest text-[#FAF9F5] hover:text-[#9CCC65] transition-all flex items-center gap-1 group py-2 bg-transparent border-none cursor-pointer"
+                className="text-xs font-bold uppercase tracking-widest text-stone-200 hover:text-[#A2C97A] transition-colors flex items-center gap-2 group py-2 bg-transparent border-none cursor-pointer"
               >
-                <span>Discover Our Origins</span>
-                <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 duration-200" />
+                <span>Read Our Tea Story</span>
+                <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-250" />
               </button>
             </div>
           </div>
@@ -603,10 +631,19 @@ function MainAppContent() {
             ) : (
               <div 
                 ref={viewStyle === "carousel" ? productScrollRef : undefined}
+                onMouseDown={handleSwipeStart}
+                onMouseMove={handleSwipeMove}
+                onMouseUp={handleSwipeEnd}
+                onMouseLeave={handleSwipeEnd}
+                onTouchStart={handleSwipeStart}
+                onTouchMove={handleSwipeMove}
+                onTouchEnd={handleSwipeEnd}
                 className={
                   viewStyle === "grid" 
                     ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-6"
-                    : "flex gap-6 overflow-x-auto pb-8 pt-4 px-2 scrollbar-thin scroll-smooth"
+                    : `flex gap-6 overflow-x-auto pb-8 pt-4 px-2 scroll-smooth no-scrollbar snap-x snap-mandatory ${
+                        isSwiping ? "cursor-grabbing select-none" : "cursor-grab"
+                      }`
                 }
                 id="products-scroller"
               >
@@ -614,7 +651,7 @@ function MainAppContent() {
                   <div
                     key={p.id}
                     className={`${
-                      viewStyle === "carousel" ? "min-w-[280px] w-[280px]" : "w-full"
+                      viewStyle === "carousel" ? "min-w-[280px] w-[280px] snap-center shrink-0" : "w-full"
                     } bg-white border-2 border-black rounded-3xl p-5 flex flex-col justify-between shadow-retro hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-pointer`}
                     onClick={() => setSelectedProduct(p)}
                   >

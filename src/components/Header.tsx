@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useShop } from "../context/ShopContext";
 import { ShoppingBag, Menu, X, ChevronDown, Award, Sparkles, BookOpen, User, Truck, Database } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 
 export const Header: React.FC = () => {
   const { cart, setCartOpen, activeCategory, setActiveCategory, setTrackingOpen, activePage, setActivePage } = useShop();
@@ -41,10 +42,12 @@ export const Header: React.FC = () => {
   return (
     <>
       {/* Top Banner Statement */}
-      <div className="bg-[#00838F] text-white text-[11px] font-medium tracking-widest text-center py-2 px-4 uppercase relative z-50 flex items-center justify-center gap-2">
-        <span className="hidden sm:inline">🌲</span>
-        <span>FREE US SHIPPING FOR ORDERS OVER $75 • 100% ORGANIC & COMPOSTABLE SACHETS</span>
-        <span className="hidden sm:inline">🌲</span>
+      <div className="bg-[#121A16] border-b border-[#24332B] text-[#ECEAE4] text-[10px] md:text-[11px] font-medium tracking-[0.18em] text-center py-2.5 px-4 uppercase relative z-50 flex items-center justify-center gap-3">
+        <span className="text-[#A2C97A] text-[9px] animate-pulse">✦</span>
+        <span>FREE US SHIPPING FOR ORDERS OVER $75</span>
+        <span className="text-zinc-600 block sm:inline">•</span>
+        <span className="text-[#A2C97A] font-semibold">100% ORGANIC & COMPOSTABLE SACHETS</span>
+        <span className="text-[#A2C97A] text-[9px] animate-pulse">✦</span>
       </div>
 
       <header className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-neutral-100 z-40 transition-shadow hover:shadow-sm">
@@ -209,140 +212,171 @@ export const Header: React.FC = () => {
       </header>
 
       {/* Mobile Drawer Navigation overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden" id="mobile-menu-overlay">
-          {/* Backdrop screen filter */}
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
-            onClick={() => setMobileMenuOpen(false)}
-          />
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden h-screen overflow-hidden" id="mobile-menu-overlay">
+            {/* Backdrop screen filter */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.65 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="fixed inset-0 bg-black backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            />
 
-          <div className="relative flex flex-col w-4/5 max-w-sm h-full bg-white shadow-xl py-6 px-5 z-10 transition-transform">
-            <div className="flex items-center justify-between border-b pb-4 border-neutral-100">
-              <div className="flex items-center gap-2">
-                <svg viewBox="0 0 100 100" className="w-6 h-6 text-[#5D8B2C]">
-                  <path d="M50,85 C50,85 45,55 25,45 C45,45 50,25 50,15 C50,25 55,45 75,45 C55,55 50,85 50,85 Z" fill="currentColor" />
-                </svg>
-                <div className="font-serif italic text-base font-bold text-[#1E2229] leading-none">
-                  two leaves & a bud
-                </div>
-              </div>
-              <button
-                onClick={() => setMobileMenuOpen(false)}
-                className="p-1 rounded-full text-neutral-500 hover:bg-neutral-100 focus:outline-none"
-                id="close-mobile-menu-btn"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Scrollable list inside Mobile Drawer */}
-            <div className="flex-1 overflow-y-auto py-6 space-y-6">
-              <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#00838F] mb-3">Tea Categories</h3>
-                <div className="grid gap-1">
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setActivePage("store");
-                        setActiveCategory(cat.id);
-                        setMobileMenuOpen(false);
-                        setTimeout(() => {
-                          const el = document.getElementById("best-sellers-section");
-                          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }, 120);
-                      }}
-                      className={`text-left px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors border-none bg-transparent ${
-                        activeCategory === cat.id && activePage === "store"
-                          ? "bg-[#E0F2F1] text-[#00838F] font-bold"
-                          : "text-neutral-700 hover:bg-neutral-50"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t border-neutral-150 pt-5 space-y-3">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-2">Navigation</h3>
-                
-                <button
-                  onClick={() => {
-                    setActivePage("origins");
-                    setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={`w-full text-left font-semibold text-xs py-2 px-3 rounded-lg border-none bg-transparent ${activePage === "origins" ? "bg-neutral-100 text-[#00838F] font-bold" : "text-neutral-700"}`}
-                >
-                  Our Origins & Tea Story
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActivePage("journal");
-                    setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={`w-full text-left font-semibold text-xs py-2 px-3 rounded-lg border-none bg-transparent ${activePage === "journal" ? "bg-emerald-50 text-emerald-800 font-bold" : "text-neutral-700"}`}
-                >
-                  Tea Journal Blog
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActivePage("wholesale");
-                    setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={`w-full text-left font-semibold text-xs py-2 px-3 rounded-lg border-none bg-transparent ${activePage === "wholesale" ? "bg-neutral-100 text-neutral-900 font-bold" : "text-neutral-700"}`}
-                >
-                  Wholesale Coffee & Tea
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActivePage("account");
-                    setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={`w-full text-left font-semibold text-xs py-2 px-3 rounded-lg border-none bg-transparent ${activePage === "account" ? "bg-[#E0F2F1] text-[#00838F] font-bold" : "text-neutral-700"}`}
-                >
-                  My Account Profile
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActivePage("mongodb");
-                    setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={`w-full text-left font-mono text-[11px] py-1.5 px-3 rounded-lg border border-dashed flex items-center gap-2 ${activePage === "mongodb" ? "bg-slate-900 text-white border-slate-900 font-bold" : "bg-white text-neutral-700 border-neutral-200"}`}
-                >
-                  <Database className="w-3.5 h-3.5 text-[#00838F]" />
-                  <span>MongoDB Live Statistics</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Footer inside Drawer */}
-            <div 
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setTrackingOpen(true);
-              }}
-              className="bg-neutral-50 rounded-xl p-3.5 flex items-center gap-3 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+            <motion.div
+              initial={{ x: "-100%", opacity: 0.95 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "-100%", opacity: 0.95 }}
+              transition={{ type: "spring", damping: 26, stiffness: 210 }}
+              className="relative flex flex-col w-[85%] max-w-sm h-full bg-[#FAF9F5] border-r-4 border-black shadow-2xl z-10 overflow-hidden"
             >
-              <Truck className="w-5 h-5 text-[#00838F]" />
-              <div>
-                <p className="text-xs font-bold text-neutral-800">Track Current Shipments</p>
-                <p className="text-[10px] text-neutral-500">Live logs & package tracking</p>
+              {/* Header block (fixed top inside drawer) */}
+              <div className="flex items-center justify-between border-b-2 border-black p-5 bg-white shrink-0">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 100 100" className="w-6 h-6 text-[#5D8B2C]">
+                    <path d="M50,85 C50,85 45,55 25,45 C45,45 50,25 50,15 C50,25 55,45 75,45 C55,55 50,85 50,85 Z" fill="currentColor" />
+                  </svg>
+                  <div className="font-serif italic text-base font-black text-neutral-900 leading-none">
+                    two leaves & a bud
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-xl text-neutral-800 hover:bg-neutral-50 active:bg-neutral-150 focus:outline-none border-2 border-black shadow-retro-mini hover:translate-y-0.5 transition-transform cursor-pointer"
+                  id="close-mobile-menu-btn"
+                  aria-label="Close menu drawer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-            </div>
+
+              {/* Scrollable list inside Mobile Drawer with refined overflow scrolling & inertia */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-7 overscroll-y-contain [scrolling-behavior:smooth] [webkit-overflow-scrolling:touch] no-scrollbar">
+                
+                {/* Category selection tree */}
+                <div>
+                  <h3 className="text-[10px] font-mono font-black uppercase tracking-widest text-[#00838F] mb-3 flex items-center gap-1.5">
+                    <span>🍃</span>
+                    <span>Browse Tea Blends ({categories.length - 1})</span>
+                  </h3>
+                  
+                  <div className="grid gap-2">
+                    {categories.map((cat, idx) => (
+                      <motion.button
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.04 }}
+                        key={cat.id}
+                        onClick={() => {
+                          setActivePage("store");
+                          setActiveCategory(cat.id);
+                          setMobileMenuOpen(false);
+                          setTimeout(() => {
+                            const el = document.getElementById("best-sellers-section");
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 150);
+                        }}
+                        className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold transition-all border-2 tracking-wide cursor-pointer flex items-center justify-between ${
+                          activeCategory === cat.id && activePage === "store"
+                            ? "bg-[#E0F2F1] text-[#00838F] border-black shadow-retro-mini font-black translate-y-0.5"
+                            : "text-neutral-700 bg-white hover:bg-stone-55 border-neutral-200 hover:border-black hover:shadow-retro-mini"
+                        }`}
+                      >
+                        <span>{cat.label}</span>
+                        {activeCategory === cat.id && activePage === "store" && (
+                          <span className="text-[9px] font-mono bg-[#00838F] text-white px-1.5 py-0.5 rounded font-black">ACTIVE</span>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Editorial and account navigation links */}
+                <div className="border-t-2 border-dashed border-neutral-300 pt-6 space-y-3">
+                  <h3 className="text-[10px] font-mono font-black uppercase tracking-widest text-[#5D8B2C] mb-3 flex items-center gap-1.5">
+                    <span>📍</span>
+                    <span>Heritage Navigation</span>
+                  </h3>
+                  
+                  <div className="grid gap-2">
+                    {[
+                      { page: "origins", label: "Origins & Organic Soil Story" },
+                      { page: "journal", label: "Tea Journal & Steep Records" },
+                      { page: "wholesale", label: "Wholesale & Custom Samplers" },
+                      { page: "account", label: "My Customer Hub (MongoDB Orders)" },
+                      { page: "mongodb", label: "Live System Diagnostic Dashboard" }
+                    ].map((link, idx) => {
+                      const isActive = activePage === link.page;
+                      return (
+                        <motion.button
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.15 + idx * 0.04 }}
+                          key={link.page}
+                          onClick={() => {
+                            setActivePage(link.page);
+                            setMobileMenuOpen(false);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className={`w-full text-left font-bold text-xs py-3 px-4 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                            isActive
+                              ? "bg-stone-900 text-white border-black shadow-retro-mini font-black"
+                              : "bg-white text-neutral-700 border-neutral-200 hover:border-black hover:shadow-retro-mini"
+                          }`}
+                        >
+                          <span>{link.label}</span>
+                          {isActive && <span className="w-2 h-2 rounded-full bg-emerald-400" />}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Admin configuration portal section inside mobile overlay list */}
+                <div className="border-t-2 border-dashed border-neutral-300 pt-6">
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                    onClick={() => {
+                      setActivePage("admin");
+                      setMobileMenuOpen(false);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className={`w-full font-black text-xs py-3 px-4 rounded-xl border-2 tracking-wider transition-all cursor-pointer text-center uppercase flex items-center justify-center gap-2 ${
+                      activePage === "admin"
+                        ? "bg-amber-100 text-amber-900 border-black shadow-retro-mini"
+                        : "bg-amber-50 text-amber-850 hover:bg-amber-100 border-amber-300 hover:border-black shadow-retro-mini"
+                    }`}
+                  >
+                    <span>🔐 Authenticated Admin Console</span>
+                  </motion.button>
+                </div>
+
+              </div>
+
+              {/* Mobile Footer inside Drawer (fixed bottom inside drawer, never pushed off-screen) */}
+              <div className="p-4 border-t-2 border-black bg-white shrink-0">
+                <div 
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setTrackingOpen(true);
+                  }}
+                  className="rounded-xl p-3 flex items-center gap-3 border-2 border-black cursor-pointer hover:bg-neutral-50 transition-all bg-white shadow-retro-small"
+                >
+                  <Truck className="w-5 h-5 text-[#00838F]" />
+                  <div>
+                    <p className="text-xs font-black text-neutral-900">Track Current Shipments</p>
+                    <p className="text-[10px] text-neutral-500 font-mono mt-0.5">Live MongoDB log tracker</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </>
   );
 };
