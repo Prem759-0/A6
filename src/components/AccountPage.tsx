@@ -428,12 +428,12 @@ export const AccountPage: React.FC = () => {
                               <div>
                                 <p className="font-bold text-neutral-800">{item.name}</p>
                                 <p className="text-[11px] text-neutral-500">
-                                  Quantity: {item.quantity} × ${item.price.toFixed(2)}
+                                  Quantity: {item.quantity} × ${(item.price ?? 0).toFixed(2)}
                                 </p>
                               </div>
                             </div>
                             <span className="font-bold text-neutral-900">
-                              ${(item.quantity * item.price).toFixed(2)}
+                              ${((item.quantity ?? 1) * (item.price ?? 0)).toFixed(2)}
                             </span>
                           </div>
                         ))}

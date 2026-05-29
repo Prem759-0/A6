@@ -342,7 +342,7 @@ function MainAppContent() {
                           {activeShowcaseProduct.name}
                         </h3>
                         <span className="font-mono text-base font-extrabold text-[#A2C97A] bg-[#A2C97A]/10 px-3 py-0.5 rounded-lg border border-[#A2C97A]/25 whitespace-nowrap">
-                          ${activeShowcaseProduct.price.toFixed(2)}
+                          ${(activeShowcaseProduct.price ?? 0).toFixed(2)}
                         </span>
                       </div>
 
@@ -598,7 +598,7 @@ function MainAppContent() {
                       {/* Rating details top right of item card */}
                       <span className="absolute top-2.5 right-2.5 z-10 text-[9px] font-bold text-neutral-800 font-mono bg-white border border-neutral-300 rounded px-1.5 py-0.5 flex items-center gap-0.5 select-none animate-pulse-short">
                         <span className="text-yellow-500">★</span>
-                        <span>{p.rating.toFixed(2)} ({p.reviewCount})</span>
+                        <span>{(p.rating ?? 5.0).toFixed(2)} ({p.reviewCount ?? 1})</span>
                       </span>
 
                       {/* Standard modular Product Illustration */}
@@ -685,7 +685,7 @@ function MainAppContent() {
                             Price
                           </p>
                           <p className="text-[#E64A19] font-mono text-sm font-black mt-0.5 leading-none">
-                            {p.isFromPrice ? "From " : ""}${p.price.toFixed(2)}
+                            {p.isFromPrice ? "From " : ""}${(p.price ?? 0).toFixed(2)}
                           </p>
                         </div>
                         

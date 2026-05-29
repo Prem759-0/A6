@@ -328,7 +328,7 @@ export const CanisterCustomizer: React.FC = () => {
               <div className="h-8 w-px bg-white/10"></div>
               <div>
                 <span className="text-[9px] font-mono text-neutral-400 block uppercase font-bold">TOTAL PRICE</span>
-                <span className="font-black text-[#00E676] font-mono text-base">${selectedSizeInfo.price.toFixed(2)}</span>
+                <span className="font-black text-[#00E676] font-mono text-base">${(selectedSizeInfo?.price ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
@@ -362,7 +362,7 @@ export const CanisterCustomizer: React.FC = () => {
                     >
                       <span className="font-extrabold text-xs text-neutral-800 uppercase block">{sz.name} ({sz.volume})</span>
                       <span className="text-[9px] text-neutral-500 font-light mt-0.5 leading-none block">{sz.capacity}</span>
-                      <span className="font-mono text-xs font-black text-[#E64A19] mt-2 block">${sz.price.toFixed(2)}</span>
+                      <span className="font-mono text-xs font-black text-[#E64A19] mt-2 block">${(sz?.price ?? 0).toFixed(2)}</span>
                     </button>
                   );
                 })}

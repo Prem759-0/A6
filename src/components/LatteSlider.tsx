@@ -172,7 +172,7 @@ export const LatteSlider: React.FC = () => {
             <div className="flex items-center justify-between border-t border-neutral-200 pt-4 mt-6">
               <div>
                 <span className="text-[10px] uppercase font-mono text-neutral-400 font-bold tracking-wider">PREMIUM PRICE</span>
-                <p className="text-[#E64A19] text-lg font-black font-mono leading-none">${currentLatte.price.toFixed(2)}</p>
+                <p className="text-[#E64A19] text-lg font-black font-mono leading-none">${(currentLatte.price ?? 0).toFixed(2)}</p>
               </div>
 
               <button

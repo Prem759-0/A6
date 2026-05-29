@@ -129,7 +129,7 @@ export const ProductDetailModal: React.FC = () => {
             <div className="w-full bg-white border-2 border-black rounded-xl p-3 text-center shadow-retro-sm">
               <span className="text-[10px] font-mono font-bold tracking-widest text-neutral-400 uppercase block">PRICE POINT</span>
               <span className="font-mono text-xl font-black text-[#E64A19] mt-0.5 inline-block">
-                {selectedProduct.isFromPrice ? "From " : ""}${selectedProduct.price.toFixed(2)}
+                {selectedProduct.isFromPrice ? "From " : ""}${(selectedProduct.price ?? 0).toFixed(2)}
               </span>
             </div>
           </div>
@@ -151,7 +151,7 @@ export const ProductDetailModal: React.FC = () => {
                   ))}
                 </div>
                 <span className="text-xs font-mono font-semibold text-neutral-600 underline">
-                  {selectedProduct.rating.toFixed(2)} based on {selectedProduct.reviewCount} pluck verify reviews
+                  {(selectedProduct.rating ?? 5.0).toFixed(2)} based on {selectedProduct.reviewCount ?? 1} pluck verify reviews
                 </span>
               </div>
             </div>

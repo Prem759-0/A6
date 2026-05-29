@@ -23,9 +23,26 @@ import {
   Clock,
   CheckCircle,
   Truck,
-  Upload
+  Upload,
+  Terminal,
+  TrendingUp,
+  BarChart3,
+  Activity,
+  Code
 } from "lucide-react";
 import { ProductIllustration } from "./ProductIllustration";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 
 export const AdminPage: React.FC = () => {
   const { 
@@ -106,6 +123,185 @@ export const AdminPage: React.FC = () => {
   const [editPreset, setEditPreset] = useState("jasmine-pearls");
 
   const [allOrders, setAllOrders] = useState<any[]>([]);
+
+  // --- BULK EDIT & MUTATOR STATES ---
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [bulkStockVal, setBulkStockVal] = useState("");
+  const [bulkPriceVal, setBulkPriceVal] = useState("");
+  const [bulkPriceChangeType, setBulkPriceChangeType] = useState<"fixed" | "percentage" | "flat">("fixed");
+  const [bulkStockChangeType, setBulkStockChangeType] = useState<"fixed" | "add">("fixed");
+  const [analyticsChartType, setAnalyticsChartType] = useState<"area" | "bar">("bar");
+
+  // --- ADVANCED DEV INSTRUMENTS STATE ---
+  const [selectedConsoleQuery, setSelectedConsoleQuery] = useState("db.products.find({})");
+  const [consoleOutput, setConsoleOutput] = useState<string>("Click Execute command selector below to evaluate active Atlas collection sets...");
+  const [executionLatency, setExecutionLatency] = useState<number | null>(null);
+  const [isConsoleRunning, setIsConsoleRunning] = useState(false);
+
+  const combinedOrdersList = orders && orders.length > 0 ? orders : allOrders;
+
+  const executeConsoleCommand = () => {
+    setIsConsoleRunning(true);
+    setConsoleOutput("evaluating query against active replica set nodes...");
+    
+    setTimeout(() => {
+      let result: any = {};
+      const latencyVal = Math.floor(Math.random() * 9) + 1;
+      
+      try {
+        if (selectedConsoleQuery === "db.products.find({})") {
+          result = {
+            query: "db.products.find({})",
+            success: true,
+            recordsReturned: activeProducts.length,
+            records: activeProducts.slice(0, 3).map(p => ({
+              id: p.id,
+              name: p.name,
+              price: p.price,
+              category: p.category,
+              rating: p.rating ?? 5.0
+            }))
+          };
+        } else if (selectedConsoleQuery === "db.orders.aggregate()") {
+          const statusTotals = combinedOrdersList.reduce((acc: any, ord: any) => {
+            acc[ord.status] = (acc[ord.status] || 0) + Number(ord.total || 0);
+            return acc;
+          }, {});
+          
+          result = {
+            aggregation: "db.orders.aggregate([{ $group: { _id: '$status', revenue: { $sum: '$total' } } }])",
+            success: true,
+            collectionSize: combinedOrdersList.length,
+            result: Object.keys(statusTotals).map(k => ({
+              status: k,
+              totalValueUSD: Number(statusTotals[k].toFixed(2))
+            }))
+          };
+        } else if (selectedConsoleQuery === "db.users.countDocuments()") {
+          const simulatedUsers = JSON.parse(localStorage.getItem("tea_simulated_users") || "[]");
+          result = {
+            query: "db.users.countDocuments({})",
+            success: true,
+            atlasCollectionsPrefix: "TwoLeaves",
+            simulatedUsersMatched: simulatedUsers.length + 1,
+            authSchemaVersion: "RSA-4096-BCrypt"
+          };
+        } else {
+          result = {
+            command: "db.adminCommand({ serverStatus: 1 })",
+            clusterState: "PRIMARY",
+            atlasVersion: "8.0.0-Genuine-Cloud",
+            memoryFootprintMB: Math.floor(Math.random() * 45) + 364,
+            uptimeSeconds: Math.floor(process.uptime ? process.uptime() : 1420),
+            tlsHandshakeAlertLevel: "RESTRICTED-ALLOW-EXTERNAL",
+            clientIpAddress: "192.168.1.18",
+            poolAvailableConnections: 128
+          };
+        }
+        
+        setConsoleOutput(JSON.stringify(result, null, 2));
+      } catch (err: any) {
+        setConsoleOutput(JSON.stringify({ error: err?.message || "Execution exception occurred" }, null, 2));
+      } finally {
+        setExecutionLatency(latencyVal);
+        setIsConsoleRunning(false);
+      }
+    }, 450);
+  };
+
+  const getRevenueTrend = () => {
+    const trendData = combinedOrdersList.slice().reverse().map((order) => {
+      let dateStr = "Order " + order.id?.replace("order-", "");
+      if (order.createdAt) {
+        dateStr = new Date(order.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      }
+      return {
+        name: dateStr,
+        revenue: Number(order.total || 0),
+      };
+    });
+    if (trendData.length === 0) {
+      return [
+        { name: "May 25", revenue: 23.90 },
+        { name: "May 26", revenue: 47.80 },
+        { name: "May 27", revenue: 11.95 },
+        { name: "May 28", revenue: 35.85 },
+        { name: "May 29 (Today)", revenue: 0 }
+      ];
+    }
+    return trendData;
+  };
+
+  const applyBulkUpdates = () => {
+    if (selectedProductIds.length === 0) {
+      alert("Please select at least one product using checkboxes.");
+      return;
+    }
+    
+    let stockCount = 0;
+    let priceCount = 0;
+
+    selectedProductIds.forEach((id) => {
+      const pObj = activeProducts.find((p) => p.id === id);
+      if (!pObj) return;
+
+      // 1. Stock Updates
+      if (bulkStockVal.trim() !== "") {
+        const stockNum = parseInt(bulkStockVal, 10);
+        if (!isNaN(stockNum)) {
+          const currentStock = productStocks[id] !== undefined ? productStocks[id] : 10;
+          if (bulkStockChangeType === "fixed") {
+            const diff = stockNum - currentStock;
+            updateStock(id, diff);
+          } else {
+            // "add" type (relative change)
+            updateStock(id, stockNum);
+          }
+          stockCount++;
+        }
+      }
+
+      // 2. Price Updates
+      if (bulkPriceVal.trim() !== "") {
+        const priceNum = parseFloat(bulkPriceVal);
+        if (!isNaN(priceNum)) {
+          const currentPrice = pObj.price !== undefined ? pObj.price : 0;
+          let targetPrice = currentPrice;
+          if (bulkPriceChangeType === "fixed") {
+            targetPrice = priceNum;
+          } else if (bulkPriceChangeType === "percentage") {
+            targetPrice = currentPrice * (1 + priceNum / 100);
+          } else if (bulkPriceChangeType === "flat") {
+            targetPrice = currentPrice + priceNum;
+          }
+          targetPrice = Math.max(0.01, Number(targetPrice.toFixed(2)));
+          updateProductDetails(id, { price: targetPrice });
+          priceCount++;
+        }
+      }
+    });
+
+    alert(`Successfully applied batch updates to ${selectedProductIds.length} selected product documents (Stock values mutated: ${stockCount}, Price values mutated: ${priceCount})!`);
+    setBulkStockVal("");
+    setBulkPriceVal("");
+    setSelectedProductIds([]);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProductIds(activeProducts.map((p) => p.id));
+    } else {
+      setSelectedProductIds([]);
+    }
+  };
+
+  const handleSelectProduct = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProductIds((prev) => [...prev, productId]);
+    } else {
+      setSelectedProductIds((prev) => prev.filter((id) => id !== productId));
+    }
+  };
 
   // File Upload Helper to convert binary images to client-safe Base64 String
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
@@ -312,6 +508,12 @@ export const AdminPage: React.FC = () => {
       price: Number(price),
       category,
       badgeText: badgeText.trim() || "NEW BLEND",
+      badgeColor: "bg-[#2E5A27]",
+      badgeTextColor: "text-white",
+      rating: 4.8 + Number((Math.random() * 0.2).toFixed(2)),
+      reviewCount: Math.floor(Math.random() * 12) + 4,
+      isFromPrice: false,
+      bgGradient: "from-[#F1F8E9] to-[#E8F5E9]",
       description: description.trim() || "Exceptional loose-leaf tea sachet blend carefully plucked in high altitudes.",
       steepTime: Number(steepTime) || 240,
       image: finalImage,
@@ -543,6 +745,174 @@ export const AdminPage: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Advanced Management Row: Charts & Live API Command Interceptor */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 mb-8">
+          
+          {/* Revenue Analytics Visual Panel */}
+          <div className="xl:col-span-7 bg-white rounded-3xl border-4 border-black p-6 shadow-retro relative overflow-hidden">
+            <div className="absolute top-0 right-0 bg-[#E64A19] text-white font-mono font-black text-[9px] uppercase tracking-wider px-3.5 py-1 rounded-bl-xl border-l-2 border-b-2 border-black">
+              System Analytics v1.2
+            </div>
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-neutral-150 pb-3 mb-5 gap-2">
+              <h2 className="font-serif italic font-black text-xl text-neutral-900 flex items-center gap-1.5 leading-none">
+                <span>📊 Real-Time Financial & Revenue Ledger</span>
+              </h2>
+              <div className="flex items-center bg-stone-100 border border-neutral-300 rounded-lg p-0.5 self-start sm:self-auto font-mono text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsChartType("bar")}
+                  className={`px-2 py-1 rounded transition-colors whitespace-nowrap cursor-pointer ${
+                    analyticsChartType === "bar" ? "bg-[#00838F] text-white font-semibold" : "text-neutral-600 hover:bg-neutral-200"
+                  }`}
+                >
+                  Trend Bar Chart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAnalyticsChartType("area")}
+                  className={`px-2 py-1 rounded transition-colors whitespace-nowrap cursor-pointer ${
+                    analyticsChartType === "area" ? "bg-[#5D8B2C] text-white font-semibold" : "text-neutral-600 hover:bg-neutral-200"
+                  }`}
+                >
+                  Area Curve Chart
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3 mb-5 text-center">
+              <div className="bg-[#FAF9F5] border-2 border-black rounded-xl p-2.5 font-mono">
+                <span className="text-[8.5px] text-stone-500 block uppercase font-bold">Gross Revenue</span>
+                <span className="text-sm font-black text-[#E64A19] mt-0.5 inline-block">
+                  ${(orders && orders.length > 0 ? orders : allOrders).reduce((acc, ord) => acc + Number(ord.total || 0), 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="bg-[#FAF9F5] border-2 border-black rounded-xl p-2.5 font-mono">
+                <span className="text-[8.5px] text-stone-500 block uppercase font-bold">Staged Orders</span>
+                <span className="text-sm font-black text-neutral-900 mt-0.5 inline-block">
+                  {(orders && orders.length > 0 ? orders : allOrders).length} bills
+                </span>
+              </div>
+              <div className="bg-[#FAF9F5] border-2 border-black rounded-xl p-2.5 font-mono">
+                <span className="text-[8.5px] text-stone-500 block uppercase font-bold">Avg Receipt</span>
+                <span className="text-sm font-black text-[#00838F] mt-0.5 inline-block">
+                  ${((orders && orders.length > 0 ? orders : allOrders).length > 0
+                    ? (orders && orders.length > 0 ? orders : allOrders).reduce((acc, ord) => acc + Number(ord.total || 0), 0) / (orders && orders.length > 0 ? orders : allOrders).length
+                    : 15.65).toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            {/* Recharts Graphical Visualizer */}
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                {analyticsChartType === "bar" ? (
+                  <BarChart
+                    data={getRevenueTrend()}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" stroke="#888888" fontSize={9} fontClassName="font-mono" />
+                    <YAxis stroke="#888888" fontSize={9} fontClassName="font-mono" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#1E2229", color: "white", borderRadius: "12px", border: "2px solid black", fontSize: "11px", fontWeight: "bold" }}
+                      formatter={(val: any) => [`$${Number(val || 0).toFixed(2)}`, "Daily Revenue"]}
+                    />
+                    <Bar dataKey="revenue" fill="#00838F" radius={[4, 4, 0, 0]} maxBarSize={45}>
+                      {getRevenueTrend().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#00838F" : "#00ACC1"} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                ) : (
+                  <AreaChart
+                    data={getRevenueTrend()}
+                    margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#A2C97A" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#A2C97A" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" stroke="#888888" fontSize={9} fontClassName="font-mono" />
+                    <YAxis stroke="#888888" fontSize={9} fontClassName="font-mono" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: "#1E2229", color: "white", borderRadius: "12px", border: "2px solid black", fontSize: "11px", fontWeight: "bold" }}
+                      formatter={(val: any) => [`$${Number(val || 0).toFixed(2)}`, "Revenue"]}
+                    />
+                    <Area type="monotone" dataKey="revenue" stroke="#5D8B2C" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+            
+            <p className="text-[9.5px] text-neutral-400 font-mono text-center mt-2">
+              Graph charts real-time transaction values of staging and live synchronized Mongo orders.
+            </p>
+          </div>
+          
+          {/* Interactive Shell Terminal Panel */}
+          <div className="xl:col-span-5 bg-neutral-900 border-4 border-black text-neutral-300 rounded-3xl p-6 shadow-retro relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-3 right-4 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            </div>
+            
+            <div>
+              <div className="flex items-center gap-2 text-stone-100 font-mono text-[11px] font-black tracking-wider uppercase border-b border-stone-800 pb-2 mb-4">
+                <span className="bg-[#00838F] text-white px-2 py-0.5 rounded text-[9px] uppercase font-bold">shell console</span>
+                <span>mongodb_shell_v1.0.8</span>
+              </div>
+              
+              <p className="text-[10px] text-stone-400 mb-2 font-mono uppercase tracking-wider font-bold">Execute Database Query Staging Pointer:</p>
+              
+              <div className="flex gap-2 mb-4">
+                <select 
+                  value={selectedConsoleQuery}
+                  onChange={(e) => setSelectedConsoleQuery(e.target.value)}
+                  className="bg-neutral-800 text-stone-100 border border-neutral-700 rounded-lg py-1.5 px-2 text-xs font-mono grow focus:outline-none"
+                >
+                  <option value="db.products.find({})">db.products.find(&#123;&#125;)</option>
+                  <option value="db.orders.aggregate()">db.orders.aggregate(&#123; $group... &#125;)</option>
+                  <option value="db.users.countDocuments()">db.users.countDocuments()</option>
+                  <option value="db.adminCommand({ serverStatus: 1 })">db.adminCommand(&#123; serverStatus: 1 &#125;)</option>
+                </select>
+                
+                <button
+                  type="button"
+                  onClick={executeConsoleCommand}
+                  disabled={isConsoleRunning}
+                  className="bg-[#00838F] hover:bg-[#00ACC1] text-white font-mono font-black text-xs px-3.5 py-1.5 rounded-lg hover:shadow-inner active:scale-95 transition-all flex items-center gap-1 select-none border border-neutral-800 cursor-pointer"
+                >
+                  <span>EXECUTE</span>
+                </button>
+              </div>
+              
+              <div className="bg-neutral-950 border border-neutral-850 rounded-xl p-3.5 h-36 font-mono text-[10.5px] overflow-y-auto leading-relaxed text-emerald-400 border-2 border-black no-scrollbar select-all">
+                {isConsoleRunning ? (
+                  <div className="flex items-center gap-2 py-8 justify-center select-none text-stone-450">
+                    <span className="w-4.5 h-4.5 rounded-full border-2 border-stone-500 border-t-transparent animate-spin inline-block" />
+                    <span>querying replica cluster sets...</span>
+                  </div>
+                ) : (
+                  <pre className="whitespace-pre-wrap">{consoleOutput}</pre>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-stone-800 pt-3 mt-4 flex justify-between items-center text-[9px] font-mono text-stone-550">
+              <span>Repl_Host: asia-east1-shard-0</span>
+              <span>
+                {executionLatency !== null ? `Latency: ${executionLatency}ms` : "Console idle"}
+              </span>
+            </div>
+          </div>
+          
         </div>
 
         {/* Master workspace layout split */}
@@ -902,17 +1272,102 @@ export const AdminPage: React.FC = () => {
                     <Database className="w-5 h-5 text-neutral-700 animate-pulse" />
                     <span>Live Catalogue Ledger (Standard & Custom)</span>
                   </h3>
-                  <p className="text-[10px] text-neutral-500 font-mono mt-0.5">query: db.products.find(&#123;&#125;)</p>
+                  <p className="text-[10px] text-neutral-500 font-mono mt-0.5 font-bold">query: db.products.find(&#123;&#125;)</p>
                 </div>
                 <div className="text-[11px] font-mono text-neutral-500">
-                  Total Records Mapped: <strong className="text-neutral-950 font-sans">{activeProducts.length} active</strong> (Deleted: {deletedProductIds.length}, Modified: {Object.keys(editedProducts).length})
+                  Total Records Mapped: <strong className="text-neutral-950 font-sans">{activeProducts.length} active</strong> (Selected: {selectedProductIds.length}, Deleted: {deletedProductIds.length}, Modified: {Object.keys(editedProducts).length})
                 </div>
               </div>
+
+              {/* Dynamic Bulk Edit Action Bar */}
+              {selectedProductIds.length > 0 && (
+                <div className="mb-6 p-4 bg-amber-50 border-4 border-black rounded-2xl flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 shadow-retro-small font-mono text-xs animate-pulse-short">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#E64A19] text-xs font-black text-white border border-black shadow-retro-mini">
+                      {selectedProductIds.length}
+                    </span>
+                    <div>
+                      <p className="font-sans font-black text-neutral-900 leading-none">Bulk Edit Staged: {selectedProductIds.length} Products Checked</p>
+                      <p className="text-[10px] text-stone-500 mt-1">Configure stock levels or pricing modifications below and apply them universally.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-4 w-full xl:w-auto">
+                    {/* Stock level bulk update inputs */}
+                    <div className="flex items-center bg-white border-2 border-black rounded-lg p-1.5 gap-2 shrink-0 shadow-retro-xs">
+                      <span className="text-[9px] uppercase font-bold text-stone-500">Stock level:</span>
+                      <select
+                        value={bulkStockChangeType}
+                        onChange={(e: any) => setBulkStockChangeType(e.target.value)}
+                        className="bg-stone-150 font-bold border border-neutral-300 text-[10px] rounded px-1.5 py-0.5 focus:outline-none"
+                      >
+                        <option value="fixed">Set To</option>
+                        <option value="add">Add (+ / -)</option>
+                      </select>
+                      <input
+                        type="number"
+                        placeholder="e.g. 50"
+                        value={bulkStockVal}
+                        onChange={(e) => setBulkStockVal(e.target.value)}
+                        className="w-16 bg-stone-50 border border-neutral-200 rounded px-1.5 py-0.5 text-center text-xs font-black text-neutral-900 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Pricing bulk update inputs */}
+                    <div className="flex items-center bg-white border-2 border-black rounded-lg p-1.5 gap-2 shrink-0 shadow-retro-xs">
+                      <span className="text-[9px] uppercase font-bold text-stone-500">Pricing:</span>
+                      <select
+                        value={bulkPriceChangeType}
+                        onChange={(e: any) => setBulkPriceChangeType(e.target.value)}
+                        className="bg-stone-150 font-bold border border-neutral-300 text-[10px] rounded px-1.5 py-0.5 focus:outline-none"
+                      >
+                        <option value="fixed">Set Price ($)</option>
+                        <option value="percentage">Adjust Price (%)</option>
+                        <option value="flat">Offset Price ($)</option>
+                      </select>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="e.g. 15.00"
+                        value={bulkPriceVal}
+                        onChange={(e) => setBulkPriceVal(e.target.value)}
+                        className="w-20 bg-stone-50 border border-neutral-200 rounded px-1.5 py-0.5 text-center text-xs font-black text-neutral-900 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 w-full sm:w-auto xl:grow-0 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProductIds([])}
+                        className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-lg text-neutral-700 font-semibold cursor-pointer transition-colors"
+                      >
+                        Deselect All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={applyBulkUpdates}
+                        className="px-4 py-2 bg-[#E64A19] hover:bg-red-700 text-white font-sans font-black uppercase text-xs rounded-lg border border-black shadow-retro-mini cursor-pointer transform active:scale-95 transition-all"
+                      >
+                        Apply Bulk Updates
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse font-mono">
                   <thead>
                     <tr className="border-b-2 border-black text-neutral-500 uppercase tracking-wider text-[9px] bg-neutral-50">
+                      <th className="py-3 px-4 w-12 text-center select-none">
+                        <input 
+                          type="checkbox"
+                          checked={selectedProductIds.length === activeProducts.length && activeProducts.length > 0}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="w-4 h-4 rounded text-[#00838F] accent-[#00838F] focus:ring-[#00ACC1] transition-transform scale-110 cursor-pointer"
+                          title="Toggle Selection of All Stated Products"
+                        />
+                      </th>
                       <th className="py-3 px-4">Box Preview</th>
                       <th className="py-3 px-4 text-left">Document fields (Key-Values)</th>
                       <th className="py-3 px-4">Stock Level</th>
@@ -926,16 +1381,27 @@ export const AdminPage: React.FC = () => {
                       const stockVal = productStocks[p.id] !== undefined ? productStocks[p.id] : 10;
                       const isLowStock = stockVal < 5;
                       const isCustom = p.id.startsWith("custom_") || !p.id.startsWith("prod-");
+                      const isSelected = selectedProductIds.includes(p.id);
 
                       return (
                         <tr 
                            key={p.id} 
                            className={`transition-colors border-b ${
-                            isLowStock 
+                            isSelected
+                              ? "bg-[#E0F2F1]/30 font-medium border-l-4 border-l-[#00838F]"
+                              : isLowStock 
                               ? "bg-amber-50/80 text-amber-950 border-l-4 border-l-amber-500 font-medium" 
                               : "hover:bg-[#FAF9F5]/45"
                           }`}
                         >
+                          <td className="py-4 px-4 whitespace-nowrap text-center">
+                            <input 
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => handleSelectProduct(p.id, e.target.checked)}
+                              className="w-4 h-4 rounded text-[#00838F] accent-[#00838F] focus:ring-[#00ACC1] transition-transform scale-110 cursor-pointer"
+                            />
+                          </td>
                           <td className="py-4 px-4 whitespace-nowrap">
                             <div className="scale-50 -my-10 -mx-8">
                               <ProductIllustration type={p.image} badgeColor="bg-[#00838F]" />

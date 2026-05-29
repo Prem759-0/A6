@@ -164,7 +164,7 @@ export const CartDrawer: React.FC = () => {
                       <h4 className="font-serif font-bold text-xs text-neutral-900 truncate mt-1">
                         {item.name}
                       </h4>
-                      <p className="text-xs font-semibold text-[#E64A19] mt-0.5">${item.price.toFixed(2)}</p>
+                      <p className="text-xs font-semibold text-[#E64A19] mt-0.5">${(item?.price ?? 0).toFixed(2)}</p>
                       
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-2 mt-2">
