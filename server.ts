@@ -71,7 +71,11 @@ async function connectToMongo() {
   if (MONGODB_URI) {
     try {
       console.log("Connecting to genuine MongoDB Atlas Cluster...");
-      mongoClient = new MongoClient(MONGODB_URI);
+      mongoClient = new MongoClient(MONGODB_URI, {
+        connectTimeoutMS: 5000,
+        socketTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 5000,
+      });
       await mongoClient.connect();
       mongoDb = mongoClient.db();
       console.log("MongoDB connection established successfully! App is synchronized with real collections.");
@@ -121,7 +125,16 @@ async function connectToMongo() {
       lastConnectionError = err?.message || String(err);
       console.log("ℹ️ Notice: MongoDB genuine Atlas connection is configured but currently restricted.");
       console.log(`ℹ️ Connection error details: ${lastConnectionError}`);
-      console.log("💡 Tip: Double-check that MongoDB Atlas Network Access permits IP address '0.0.0.0/0' (Allow access from anywhere). Since this app is hosted on standard dynamic containers with multiple IPs, static whitelisting is not supported directly.");
+      
+      const errorStr = String(lastConnectionError).toLowerCase();
+      if (errorStr.includes("ssl3_read_bytes") || errorStr.includes("alert number 80") || errorStr.includes("tls")) {
+        console.log("🔒 Security Analysis: Detected TLS/SSL Handshake alert (Alert Number 80).");
+        console.log("👉 Reason: MongoDB Atlas is actively blocking this application container's outbound IP from completed cryptographic negotiation.");
+        console.log("🚀 Easy 1-Minute Fix: In your MongoDB Atlas Console, go to Security > Network Access, click 'Add IP Address', and add '0.0.0.0/0' (Allow access from anywhere) to accept database connections from dynamic hosting containers.");
+      } else {
+        console.log("💡 Tip: Double-check that MongoDB Atlas Network Access permits IP address '0.0.0.0/0' (Allow access from anywhere). Since this app is hosted on standard dynamic containers with multiple IPs, static whitelisting is not supported directly.");
+      }
+      
       mongoClient = null;
       mongoDb = null;
     }

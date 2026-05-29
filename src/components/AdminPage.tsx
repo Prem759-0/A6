@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useShop } from "../context/ShopContext";
 import { PRODUCTS } from "../data";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, 
   Save, 
@@ -16,7 +16,13 @@ import {
   Power, 
   Server, 
   RefreshCw,
-  Plus
+  Plus,
+  Edit,
+  RotateCcw,
+  Sliders,
+  Clock,
+  CheckCircle,
+  Truck
 } from "lucide-react";
 import { ProductIllustration } from "./ProductIllustration";
 
@@ -31,8 +37,25 @@ export const AdminPage: React.FC = () => {
     categories,
     addCategory,
     productStocks,
-    updateStock
+    updateStock,
+    deletedProductIds,
+    deleteProduct,
+    editedProducts,
+    updateProductDetails,
+    updateOrderStatus,
+    resetAllProducts,
+    orders
   } = useShop();
+
+  const activeProducts = [...PRODUCTS, ...customProducts]
+    .filter(p => !deletedProductIds.includes(p.id))
+    .map(p => {
+      const ed = editedProducts[p.id];
+      if (ed) {
+        return { ...p, ...ed };
+      }
+      return p;
+    });
 
   // Authentication states
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
@@ -60,6 +83,87 @@ export const AdminPage: React.FC = () => {
   const [formError, setFormError] = useState("");
   const [formSuccess, setFormSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Modal editing form state
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editBadgeText, setEditBadgeText] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editStock, setEditStock] = useState("");
+
+  const [allOrders, setAllOrders] = useState<any[]>([]);
+
+  // Function to load all simulated order database records
+  const loadAllOrders = () => {
+    try {
+      const saved = localStorage.getItem("tea_simulated_orders");
+      setAllOrders(saved ? JSON.parse(saved) : []);
+    } catch {
+      setAllOrders([]);
+    }
+  };
+
+  useEffect(() => {
+    loadAllOrders();
+  }, []);
+
+  const handleOpenEditModal = (p: any) => {
+    setEditingProduct(p);
+    setEditName(p.name);
+    setEditPrice(String(p.price));
+    setEditCategory(p.category);
+    setEditBadgeText(p.badgeText || "");
+    setEditDescription(p.description || "");
+    const stockVal = productStocks[p.id] !== undefined ? productStocks[p.id] : 10;
+    setEditStock(String(stockVal));
+  };
+
+  const handleSaveEditModal = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    // Save fields
+    updateProductDetails(editingProduct.id, {
+      name: editName,
+      price: Number(editPrice) || 10.00,
+      category: editCategory,
+      badgeText: editBadgeText,
+      description: editDescription
+    });
+
+    // Update stock
+    const originalStock = productStocks[editingProduct.id] !== undefined ? productStocks[editingProduct.id] : 10;
+    const delta = (Number(editStock) || 0) - originalStock;
+    if (delta !== 0) {
+      updateStock(editingProduct.id, delta);
+    }
+
+    setEditingProduct(null);
+    alert("Product changes saved and committed successfully!");
+  };
+
+  const handleUpdateSimulatedOrderStatus = async (orderId: string, newStatus: string) => {
+    await updateOrderStatus(orderId, newStatus);
+    loadAllOrders(); // reload
+    alert(`Order #${orderId} has been updated to "${newStatus}" status.`);
+  };
+
+  const handleDeleteSimulatedOrder = (orderId: string) => {
+    if (confirm(`Are you sure you want to purge Order #${orderId} from Database collection?`)) {
+      try {
+        const saved = localStorage.getItem("tea_simulated_orders");
+        const ordersList = saved ? JSON.parse(saved) : [];
+        const filtered = ordersList.filter((o: any) => o.id !== orderId);
+        localStorage.setItem("tea_simulated_orders", JSON.stringify(filtered));
+        loadAllOrders();
+        alert("Simulated transaction sheet purged.");
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   // Auto generate Slug for dynamic categories
   useEffect(() => {
@@ -303,11 +407,23 @@ export const AdminPage: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-mono text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-300 font-bold flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               <span>Session: admin@gmail.com</span>
             </span>
+            <button
+              onClick={() => {
+                if (confirm("WARNING: Proceeding will erase all staging datasets (custom products, edited product records, custom filters, order tracking logs) and fully restore the application state. Do you wish to continue?")) {
+                  resetAllProducts();
+                }
+              }}
+              className="px-3 py-1.5 text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-200 flex items-center gap-1.5 cursor-pointer transition-colors"
+              title="Factory Staging Reset"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Database Reset</span>
+            </button>
             <button
               onClick={handleAdminLogout}
               className="px-3 py-1.5 text-xs bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-lg border border-red-200 cursor-pointer transition-colors"
@@ -626,10 +742,10 @@ export const AdminPage: React.FC = () => {
                     <Database className="w-5 h-5 text-neutral-700 animate-pulse" />
                     <span>Live Catalogue Ledger (Standard & Custom)</span>
                   </h3>
-                  <p className="text-[10px] text-neutral-500 font-mono mt-0.5">query: db.products.find({})</p>
+                  <p className="text-[10px] text-neutral-500 font-mono mt-0.5">query: db.products.find(&#123;&#125;)</p>
                 </div>
                 <div className="text-[11px] font-mono text-neutral-500">
-                  Total Records Mapped: <strong className="text-neutral-950 font-sans">{[...PRODUCTS, ...customProducts].length} active</strong> (Standard: {PRODUCTS.length}, Custom: {customProducts.length})
+                  Total Records Mapped: <strong className="text-neutral-950 font-sans">{activeProducts.length} active</strong> (Deleted: {deletedProductIds.length}, Modified: {Object.keys(editedProducts).length})
                 </div>
               </div>
 
@@ -646,15 +762,15 @@ export const AdminPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-200">
-                    {[...PRODUCTS, ...customProducts].map((p) => {
+                    {activeProducts.map((p) => {
                       const stockVal = productStocks[p.id] !== undefined ? productStocks[p.id] : 10;
                       const isLowStock = stockVal < 5;
                       const isCustom = p.id.startsWith("custom_") || !p.id.startsWith("prod-");
 
                       return (
                         <tr 
-                          key={p.id} 
-                          className={`transition-colors border-b ${
+                           key={p.id} 
+                           className={`transition-colors border-b ${
                             isLowStock 
                               ? "bg-amber-50/80 text-amber-950 border-l-4 border-l-amber-500 font-medium" 
                               : "hover:bg-[#FAF9F5]/45"
@@ -701,7 +817,7 @@ export const AdminPage: React.FC = () => {
                             ${(p.price || 0).toFixed(2)}
                           </td>
                           <td className="py-4 px-4 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-2.5">
+                            <div className="flex items-center justify-end gap-1.5">
                               {isLowStock ? (
                                 <button
                                   onClick={() => {
@@ -724,20 +840,22 @@ export const AdminPage: React.FC = () => {
                               )}
                               
                               <button
-                                onClick={() => {
-                                  if (!isCustom) {
-                                    alert("System template products cannot be destroyed.");
-                                    return;
+                                onClick={() => handleOpenEditModal(p)}
+                                className="p-1.5 border-2 border-black bg-[#E0F2F1] text-neutral-900 rounded-lg hover:bg-teal-200 hover:shadow-retro-mini transition-all cursor-pointer"
+                                title="Edit Product Attributes"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to delete "${p.name}"? This will physically vanish it from the active storefront ledger.`)) {
+                                    await deleteProduct(p.id);
+                                    alert("Product successfully purged.");
                                   }
-                                  handleDeleteCustomItem(p.id);
                                 }}
-                                disabled={!isCustom}
-                                className={`p-1.5 border-2 rounded-lg transition-colors cursor-pointer ${
-                                  isCustom 
-                                    ? "border-red-200 hover:border-red-500 hover:bg-red-50 text-red-600" 
-                                    : "border-neutral-200 text-neutral-350 cursor-not-allowed opacity-40 bg-neutral-50"
-                                }`}
-                                title={isCustom ? "Delete Product Document" : "System template (Read-Only)"}
+                                className="p-1.5 border-2 border-black bg-red-100 text-red-900 rounded-lg hover:bg-red-200 hover:shadow-retro-mini transition-all cursor-pointer"
+                                title="Delete Product Document"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -752,8 +870,240 @@ export const AdminPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Simulated Order Dispatch & Fulfillment Tracking Console */}
+          <div className="col-span-12 mt-6">
+            <div className="bg-white rounded-3xl border-4 border-black p-6 shadow-retro overflow-hidden">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-neutral-150 pb-4 mb-6">
+                <div>
+                  <h3 className="font-serif italic font-black text-xl text-neutral-900 flex items-center gap-2">
+                    <Truck className="w-5 h-5 text-neutral-700 animate-pulse" />
+                    <span>db.orders: Simulated Dispatch & Fulfillment Console</span>
+                  </h3>
+                  <p className="text-[10px] text-neutral-400 font-mono mt-0.5">query: db.orders.find(&#123;&#125;).sort(&#123;createdAt: -1&#125;)</p>
+                </div>
+                <div className="text-[11px] font-mono text-neutral-500">
+                  Total Transaction Documents: <strong className="text-neutral-950 font-sans">{allOrders.length} records</strong>
+                </div>
+              </div>
+
+              {allOrders.length === 0 ? (
+                <div className="bg-[#FAF9F5] border-2 border-dashed border-neutral-300 rounded-2xl p-8 text-center font-mono text-neutral-500 text-xs">
+                  <p className="font-sans font-bold text-neutral-700">No client transactions recorded in this staging sandbox yet.</p>
+                  <p className="text-[10px] text-neutral-400 mt-1">Submit purchase requests in the client shopping cart or virtual checkout drawers!</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {allOrders.map((order) => {
+                    return (
+                      <div key={order.id} className="border-2 border-black rounded-2xl p-5 bg-[#FAF9F5] shadow-retro-small">
+                        <div className="flex flex-col xl:flex-row justify-between xl:items-center gap-4 border-b border-dashed border-neutral-300 pb-3 mb-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-mono font-black text-[#00838F] bg-teal-100/60 border border-[#00ACC1] px-2 py-0.5 rounded">
+                                ID: #{order.id}
+                              </span>
+                              <span className="text-[9px] font-mono text-stone-500 uppercase">
+                                ⏰ {new Date(order.createdAt).toLocaleString()}
+                              </span>
+                              <span className="text-[9px] bg-[#1E2229] text-white font-mono px-2 py-0.5 rounded uppercase font-bold">
+                                👤 {order.userEmail}
+                              </span>
+                            </div>
+                            <p className="text-xs text-stone-600 font-sans">
+                              📍 Shipping Address: <strong className="text-neutral-950">{order.address || "Digital Download / No Address Provided"}</strong>
+                            </p>
+                          </div>
+
+                          {/* Dispatch Status Controls */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[9px] font-mono text-stone-500 uppercase block font-black">Status Staging:</span>
+                            <div className="flex items-center border-2 border-black rounded-xl overflow-hidden shadow-retro-mini bg-white text-xs">
+                              {["processing", "transit", "delivered", "canceled"].map((st) => (
+                                <button
+                                  key={st}
+                                  type="button"
+                                  onClick={() => handleUpdateSimulatedOrderStatus(order.id, st)}
+                                  className={`px-2 py-1 uppercase font-bold text-[9px] tracking-tight border-r border-black last:border-none transition-colors cursor-pointer ${
+                                    order.status === st 
+                                      ? "bg-[#00838F] text-white hover:bg-[#00ACC1]" 
+                                      : "bg-white text-stone-700 hover:bg-stone-50"
+                                  }`}
+                                >
+                                  {st}
+                                </button>
+                              ))}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSimulatedOrder(order.id)}
+                              className="p-1 px-2 text-red-600 hover:bg-red-50 hover:text-red-850 border-2 border-red-300 hover:border-red-600 rounded-lg transition-all cursor-pointer bg-white font-sans text-[10px] font-bold flex items-center gap-1"
+                              title="Purge transaction record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Purge</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Items loop summary */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="bg-white border border-neutral-200 rounded-xl p-3 flex items-center gap-3">
+                              <div className="w-10 h-10 bg-[#E0F2F1] border border-stone-200 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+                                <ProductIllustration type={item.image} badgeColor="bg-[#00838F]" className="scale-[0.55] -my-6" />
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-sans font-bold text-neutral-900 truncate">{item.name}</h4>
+                                <p className="text-[10px] font-mono text-neutral-500">
+                                  Size: {item.badgeText || "15 sachets"} | Qty: {item.quantity}
+                                </p>
+                                <p className="text-[10px] font-sans font-semibold text-[#00838F]">
+                                  ${(item.price || 0).toFixed(2)} each
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Order Footer with total block */}
+                        <div className="mt-4 pt-3 border-t border-dashed border-neutral-200 flex justify-between items-center text-xs">
+                          <span className="font-mono text-stone-400 uppercase tracking-widest text-[9px]">Telemetries Verified: OK</span>
+                          <div className="bg-white border-2 border-black rounded-xl px-3 py-1 text-right shadow-retro-mini font-mono">
+                            <span className="text-[8px] uppercase tracking-wider text-stone-400">Total Charged Amount</span>
+                            <p className="text-neutral-950 font-sans font-black text-sm leading-tight">${Number(order.total || 0).toFixed(2)} USD</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
+
+      {/* Popover Product Editing Modal */}
+      <AnimatePresence>
+        {editingProduct && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ scale: 0.9, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 15, opacity: 0 }}
+              className="bg-white rounded-3xl border-4 border-black p-6 md:p-8 max-w-lg w-full shadow-retro relative max-h-[90vh] overflow-y-auto"
+            >
+              <h3 className="font-serif italic font-black text-xl text-neutral-900 border-b border-neutral-150 pb-3 mb-5 flex items-center gap-2">
+                <span>🔧 edit_product_document: updateOne()</span>
+              </h3>
+
+              <form onSubmit={handleSaveEditModal} className="space-y-4">
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                    tea blend title
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                      unit price (USD)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(e.target.value)}
+                      className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                      stock level boxes
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={editStock}
+                      onChange={(e) => setEditStock(e.target.value)}
+                      className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                      Category Route Slug
+                    </label>
+                    <select
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                      Badge ribbon text
+                    </label>
+                    <input
+                      type="text"
+                      value={editBadgeText}
+                      onChange={(e) => setEditBadgeText(e.target.value)}
+                      className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-widest text-[#00838F] block mb-1">
+                    blending notes & catalog details
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl py-2 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-[#00ACC1]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2.5 pt-3 border-t border-neutral-150">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct(null)}
+                    className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl border border-stone-300 transition-colors cursor-pointer"
+                  >
+                    Cancel Action
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#00838F] hover:bg-[#00ACC1] text-white font-bold text-xs rounded-xl border-2 border-black shadow-retro-sm transition-all hover:translate-y-0.5 cursor-pointer flex items-center gap-1"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>commit updateOne()</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

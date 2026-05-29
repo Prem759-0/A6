@@ -48,6 +48,14 @@ interface ShopContextType {
   productStocks: Record<string, number>;
   updateStock: (productId: string, delta: number) => void;
 
+  // Admin capabilities
+  deletedProductIds: string[];
+  deleteProduct: (id: string) => Promise<void>;
+  editedProducts: Record<string, Partial<Product>>;
+  updateProductDetails: (productId: string, updatedFields: Partial<Product>) => void;
+  updateOrderStatus: (orderId: string, status: string) => Promise<void>;
+  resetAllProducts: () => void;
+
   // MongoDB Full-stack session details
   user: { name: string; email: string } | null;
   setUser: (user: { name: string; email: string } | null) => void;
@@ -154,6 +162,89 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("tea_product_stocks", JSON.stringify(updated));
       return updated;
     });
+  };
+
+  // User custom deleting & soft-deleting standard templates
+  const [deletedProductIds, setDeletedProductIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("tea_deleted_product_ids");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const deleteProduct = async (id: string) => {
+    // If it's a custom dynamic product, also delete from State/Local
+    if (id.startsWith("custom_") || !id.startsWith("prod-")) {
+      const saved = localStorage.getItem("tea_custom_products");
+      let productsList = saved ? JSON.parse(saved) : [];
+      productsList = productsList.filter((p: any) => p.id !== id);
+      localStorage.setItem("tea_custom_products", JSON.stringify(productsList));
+      await fetchCustomProducts();
+    }
+    
+    // Maintain deleted list so standard templates can be fully hidden
+    setDeletedProductIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      localStorage.setItem("tea_deleted_product_ids", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const [editedProducts, setEditedProducts] = useState<Record<string, Partial<Product>>>(() => {
+    try {
+      const saved = localStorage.getItem("tea_edited_products");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const updateProductDetails = (productId: string, updatedFields: Partial<Product>) => {
+    setEditedProducts((prev) => {
+      const current = prev[productId] || {};
+      const updated = {
+        ...prev,
+        [productId]: { ...current, ...updatedFields }
+      };
+      localStorage.setItem("tea_edited_products", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const saved = localStorage.getItem("tea_simulated_orders");
+      const allOrders = saved ? JSON.parse(saved) : [];
+      const updatedOrders = allOrders.map((o: any) => 
+        o.id === orderId ? { ...o, status } : o
+      );
+      localStorage.setItem("tea_simulated_orders", JSON.stringify(updatedOrders));
+      
+      if (user) {
+        const userOrders = updatedOrders.filter((o: any) => o.userEmail?.toLowerCase() === user.email.toLowerCase());
+        setOrders(userOrders);
+      }
+    } catch (e) {
+      console.warn("Error modifying simulated order status:", e);
+    }
+  };
+
+  const resetAllProducts = () => {
+    setDeletedProductIds([]);
+    setEditedProducts({});
+    localStorage.removeItem("tea_deleted_product_ids");
+    localStorage.removeItem("tea_edited_products");
+    localStorage.removeItem("tea_custom_categories");
+    localStorage.removeItem("tea_product_stocks");
+    localStorage.removeItem("tea_custom_products");
+    localStorage.removeItem("tea_simulated_orders");
+    fetchCustomProducts();
+    setTimeout(() => {
+      window.location.reload();
+    }, 200);
   };
   
   // Full-stack states linked to MongoDB
@@ -593,7 +684,15 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Perform filtering based on search query, vibe tags & category tags over combined standard and custom products
-  const combinedProducts = [...PRODUCTS, ...customProducts];
+  const combinedProducts = [...PRODUCTS, ...customProducts]
+    .filter((p) => !deletedProductIds.includes(p.id))
+    .map((p) => {
+      const edited = editedProducts[p.id];
+      if (edited) {
+        return { ...p, ...edited };
+      }
+      return p;
+    });
   const filteredProducts = combinedProducts.filter((p) => {
     // 1. Filter by category if not "all"
     if (activeCategory !== "all" && p.category !== activeCategory) {
@@ -681,6 +780,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addCategory,
         productStocks,
         updateStock,
+        
+        // Admin Capabilities
+        deletedProductIds,
+        deleteProduct,
+        editedProducts,
+        updateProductDetails,
+        updateOrderStatus,
+        resetAllProducts,
         
         // MongoDB Full-stack fields
         user,
