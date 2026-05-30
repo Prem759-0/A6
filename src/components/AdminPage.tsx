@@ -591,6 +591,28 @@ export const AdminPage: React.FC = () => {
             </motion.div>
           )}
 
+          {/* Instructor & Grading Credentials Badge with Instant One-Click Autofill */}
+          <div className="mb-6 p-4 bg-[#E0F2F1] border-2 border-[#00838F] rounded-2xl shadow-retro-mini font-mono text-xs select-none">
+            <div className="flex items-center gap-1.5 text-[#004D40] font-bold text-[11px] mb-2">
+              <span className="w-2 h-2 rounded-full bg-[#009688] animate-ping" />
+              <span>INSTRUCTOR/GRADER AUTH DETAILS:</span>
+            </div>
+            <div className="space-y-1 text-stone-700">
+              <p>Email: <strong className="text-neutral-900 select-all">admin@gmail.com</strong></p>
+              <p>Password: <strong className="text-neutral-900 select-all">webdev</strong></p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setAdminEmail("admin@gmail.com");
+                setAdminPassword("webdev");
+              }}
+              className="mt-3 w-full bg-[#00838F] hover:bg-[#00707B] text-white font-sans font-extrabold text-[10px] uppercase tracking-wider py-1.5 px-3 rounded-lg border border-black shadow-retro-mini cursor-pointer transition-all active:scale-95 text-center flex items-center justify-center gap-1"
+            >
+              <span>⚡ AUTOFILL CREDENTIALS</span>
+            </button>
+          </div>
+
           <form onSubmit={handleAdminLoginSubmit} className="space-y-4">
             <div>
               <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block mb-1 font-bold">

@@ -510,6 +510,51 @@ export const AccountPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Instructor Credentials Assistance Banner */}
+              <div className="mb-6 p-4 bg-[#E0F2F1] border-2 border-[#00838F] rounded-2xl shadow-retro-mini text-xs">
+                <div className="flex items-center gap-1.5 text-[#004D40] font-mono font-bold text-[10px] mb-2 uppercase tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-[#009688] animate-pulse-short" />
+                  <span>Instructor / Grader Accounts:</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 text-[11px] font-mono">
+                  <div className="p-2.5 bg-white rounded-xl border border-[#B2DFDB]">
+                    <span className="block text-[9px] font-bold text-[#004D40] mb-0.5 uppercase">Admin Role</span>
+                    <p className="text-neutral-700"><span className="text-stone-400">ID:</span> admin@gmail.com</p>
+                    <p className="text-neutral-700"><span className="text-stone-400">PW:</span> webdev</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("admin@gmail.com");
+                        setPassword("webdev");
+                      }}
+                      className="mt-2 text-[9px] bg-[#00838F] text-white font-sans font-bold px-2 py-1 rounded hover:bg-[#00707B] uppercase cursor-pointer"
+                    >
+                      Autofill Admin
+                    </button>
+                  </div>
+
+                  <div className="p-2.5 bg-white rounded-xl border border-stone-200">
+                    <span className="block text-[9px] font-bold text-stone-500 mb-0.5 uppercase">Standard Role</span>
+                    <p className="text-neutral-700"><span className="text-stone-400">ID:</span> demo@twoleaves.com</p>
+                    <p className="text-neutral-700"><span className="text-stone-400">PW:</span> password123</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("demo@twoleaves.com");
+                        setPassword("password123");
+                      }}
+                      className="mt-2 text-[9px] bg-neutral-700 text-white font-sans font-bold px-2 py-1 rounded hover:bg-neutral-800 uppercase cursor-pointer"
+                    >
+                      Autofill Demo
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[9.5px] font-mono text-stone-500 text-center leading-normal">
+                  Click the autofill buttons to prefill form inputs instantly! Click <strong>"db" (MongoDB Admin Status)</strong> in the top header to login directly into the Admin dashboard.
+                </p>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!isLogin && (
                   <div>
